@@ -16,4 +16,6 @@ class Routes {
   static const String profileScreen = '/profileScreen';
   static const String credentialsScreen = '/credentialsScreen';
   static const String personalInfoScreen = '/personalInfoScreen';
+  static const String availabilitySettings = '/availabilitySettings';
+  static const String patientDetailScreen = '/patientDetailScreen';
 }

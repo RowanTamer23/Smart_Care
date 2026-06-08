@@ -6,6 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:smart_care/core/shared/theme/theme2.dart';
 import 'package:smart_care/features/doctor/profile/cubit/profile_cubit.dart';
+import 'package:smart_care/features/doctor/profile/cubit/profile_state.dart';
+import 'package:smart_care/features/doctor/profile/view/widgets/profile_label.dart';
+import 'package:smart_care/features/doctor/profile/view/widgets/profile_switch_row.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
   const PersonalInfoScreen({super.key});
@@ -307,7 +310,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                           ),
                         ),
                         GestureDetector(
-                          onTap: _pickAvatar,
+                           onTap: _pickAvatar,
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: const BoxDecoration(
@@ -347,7 +350,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     const SizedBox(height: 16),
 
                     // Full Name Input
-                    _buildLabel('Full Name'),
+                    const ProfileLabel(labelText: 'Full Name'),
                     TextFormField(
                       controller: _nameController,
                       style: AppTextStyles.body,
@@ -365,7 +368,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     const SizedBox(height: 20),
 
                     // Phone Input
-                    _buildLabel('Phone Number'),
+                    const ProfileLabel(labelText: 'Phone Number'),
                     TextFormField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
@@ -385,7 +388,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     const SizedBox(height: 20),
 
                     // Read-only Email
-                    _buildLabel('Email Address (Cannot be changed)'),
+                    const ProfileLabel(labelText: 'Email Address (Cannot be changed)'),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
@@ -429,7 +432,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     const SizedBox(height: 16),
 
                     // Specialty Dropdown
-                    _buildLabel('Specialty / Department'),
+                    const ProfileLabel(labelText: 'Specialty / Department'),
                     DropdownButtonFormField<String>(
                       value: _selectedSpecialtyId,
                       style: AppTextStyles.body,
@@ -452,7 +455,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     const SizedBox(height: 20),
 
                     // Years of Experience Input
-                    _buildLabel('Years of Experience'),
+                    const ProfileLabel(labelText: 'Years of Experience'),
                     TextFormField(
                       controller: _yearsController,
                       keyboardType: TextInputType.number,
@@ -471,7 +474,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     const SizedBox(height: 20),
 
                     // License Number Input
-                    _buildLabel('License Number'),
+                    const ProfileLabel(labelText: 'License Number'),
                     TextFormField(
                       controller: _licenseController,
                       style: AppTextStyles.body,
@@ -487,7 +490,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     const SizedBox(height: 20),
 
                     // Consultation Fee Input
-                    _buildLabel('Consultation Fee (\$)'),
+                    const ProfileLabel(labelText: 'Consultation Fee (\$)'),
                     TextFormField(
                       controller: _feeController,
                       keyboardType:
@@ -507,7 +510,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     const SizedBox(height: 20),
 
                     // Consultation Duration Input
-                    _buildLabel('Consultation Duration (minutes)'),
+                    const ProfileLabel(labelText: 'Consultation Duration (minutes)'),
                     TextFormField(
                       controller: _durationController,
                       keyboardType: TextInputType.number,
@@ -532,7 +535,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildLabel('City'),
+                              const ProfileLabel(labelText: 'City'),
                               TextFormField(
                                 controller: _cityController,
                                 style: AppTextStyles.body,
@@ -551,7 +554,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildLabel('Country'),
+                              const ProfileLabel(labelText: 'Country'),
                               TextFormField(
                                 controller: _countryController,
                                 style: AppTextStyles.body,
@@ -570,7 +573,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     const SizedBox(height: 20),
 
                     // Languages Input
-                    _buildLabel('Languages Spoken (comma separated)'),
+                    const ProfileLabel(labelText: 'Languages Spoken (comma separated)'),
                     TextFormField(
                       controller: _languagesController,
                       style: AppTextStyles.body,
@@ -583,7 +586,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     const SizedBox(height: 20),
 
                     // Bio Input
-                    _buildLabel('Short Biography'),
+                    const ProfileLabel(labelText: 'Short Biography'),
                     TextFormField(
                       controller: _bioController,
                       style: AppTextStyles.body,
@@ -610,25 +613,25 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    _buildSwitchRow(
-                      'In-Person Consultation',
-                      'Allow patients to visit your office location',
-                      _supportsInPerson,
-                      (val) => setState(() => _supportsInPerson = val),
+                    ProfileSwitchRow(
+                      title: 'In-Person Consultation',
+                      subtitle: 'Allow patients to visit your office location',
+                      value: _supportsInPerson,
+                      onChanged: (val) => setState(() => _supportsInPerson = val),
                     ),
                     const SizedBox(height: 12),
-                    _buildSwitchRow(
-                      'Video Call Consultation',
-                      'Allow online video appointments',
-                      _supportsVideo,
-                      (val) => setState(() => _supportsVideo = val),
+                    ProfileSwitchRow(
+                      title: 'Video Call Consultation',
+                      subtitle: 'Allow online video appointments',
+                      value: _supportsVideo,
+                      onChanged: (val) => setState(() => _supportsVideo = val),
                     ),
                     const SizedBox(height: 12),
-                    _buildSwitchRow(
-                      'Home Visit Consultation',
-                      'Allow traveling to the patient\'s home',
-                      _supportsHomeVisit,
-                      (val) => setState(() => _supportsHomeVisit = val),
+                    ProfileSwitchRow(
+                      title: 'Home Visit Consultation',
+                      subtitle: 'Allow traveling to the patient\'s home',
+                      value: _supportsHomeVisit,
+                      onChanged: (val) => setState(() => _supportsHomeVisit = val),
                     ),
 
                     const SizedBox(height: 40),
@@ -673,23 +676,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     );
   }
 
-  Widget _buildLabel(String labelText) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          labelText,
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: AppColors.textPrimary,
-          ),
-        ),
-      ),
-    );
-  }
-
   InputDecoration _buildInputDecoration(String hintText) {
     return InputDecoration(
       hintText: hintText,
@@ -709,41 +695,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    );
-  }
-
-  Widget _buildSwitchRow(
-      String title, String subtitle, bool value, ValueChanged<bool> onChanged) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: AppTextStyles.body
-                        .copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 2),
-                Text(subtitle,
-                    style: AppTextStyles.caption
-                        .copyWith(color: AppColors.textMuted)),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.primary,
-          ),
-        ],
-      ),
     );
   }
 }

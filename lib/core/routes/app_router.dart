@@ -1,11 +1,8 @@
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'package:smart_care/core/routes/routes.dart';
 import 'package:smart_care/features/auth/view/screens/login_screen.dart';
 import 'package:smart_care/features/auth/view/screens/medical_staff_profile_screen.dart';
 import 'package:smart_care/features/auth/view/screens/register_screen.dart';
-import 'package:smart_care/features/doctor/home/view/screens/home_screen.dart';
 import 'package:smart_care/features/doctor/home/view/screens/main_layout.dart';
 import 'package:smart_care/features/doctor/profile/view/screens/profile_screen.dart';
 import 'package:smart_care/features/onboarding/view/screens/onboarding_screen.dart';
@@ -18,6 +15,9 @@ import 'package:smart_care/features/patient/medical_records_screen.dart';
 import 'package:smart_care/features/patient/profile/view/profile_screen.dart';
 import 'package:smart_care/features/doctor/profile/view/screens/credentials_screen.dart';
 import 'package:smart_care/features/doctor/profile/view/screens/personal_info_screen.dart';
+import 'package:smart_care/features/doctor/schedule/view/screens/availability_settings_screen.dart';
+import 'package:smart_care/features/doctor/patients/view/screens/patient_detail_screen.dart';
+import 'package:smart_care/features/doctor/patients/data/model/doctor_patient_model.dart';
 
 class AppRouter {
   static Route generateRoute(RouteSettings settings) {
@@ -80,6 +80,16 @@ class AppRouter {
       case Routes.personalInfoScreen:
         return MaterialPageRoute(
             builder: (_) => const PersonalInfoScreen());
+
+      case Routes.availabilitySettings:
+        final staffProfileId = settings.arguments as String;
+        return MaterialPageRoute(
+            builder: (_) => AvailabilitySettingsScreen(staffProfileId: staffProfileId));
+
+      case Routes.patientDetailScreen:
+        final patient = settings.arguments as DoctorPatient;
+        return MaterialPageRoute(
+            builder: (_) => PatientDetailScreen(patient: patient));
     }
 
     // Unknown route

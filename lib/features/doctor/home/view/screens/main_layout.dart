@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:smart_care/core/shared/bottom_nav.dart';
 import 'package:smart_care/core/shared/theme/theme2.dart';
 import 'package:smart_care/features/doctor/home/view/screens/home_screen.dart';
-import 'package:smart_care/features/doctor/home/view/screens/schedule_screen.dart';
-import 'package:smart_care/features/doctor/home/view/screens/patients_screen.dart';
-import 'package:smart_care/features/doctor/home/view/screens/requests_screen.dart';
+import 'package:smart_care/features/doctor/schedule/view/screens/schedule_screen.dart';
+import 'package:smart_care/features/doctor/patients/view/screens/patients_screen.dart';
 import 'package:smart_care/features/doctor/profile/view/screens/profile_screen.dart';
 import 'package:smart_care/features/patient/find_specialist_screen.dart';
 import 'package:smart_care/features/patient/home/view/home_screen.dart';
@@ -29,15 +28,14 @@ class _MainLayoutState extends State<MainLayout> {
     super.initState();
     _screens = widget.role == 'doctor'
         ? [
-            const HomeScreen(),
-            const ScheduleScreen(),
+            HomeScreen(role: widget.role, profileId: widget.profileId),
+            ScheduleScreen(role: widget.role, profileId: widget.profileId),
             const PatientsScreen(),
-            const RequestsScreen(),
             ProfileScreen(profileId: widget.profileId),
           ]
         : [
             const PatientHomeScreen(),
-            const ScheduleScreen(),
+            ScheduleScreen(role: widget.role, profileId: widget.profileId),
             const FindSpecialistScreen(),
             const MedicalRecordsScreen(),
             const PatientProfileScreen(),
