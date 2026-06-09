@@ -3,6 +3,8 @@ import 'package:smart_care/core/routes/routes.dart';
 import 'package:smart_care/core/shared/theme/theme2.dart';
 import 'package:smart_care/features/doctor/patients/data/model/doctor_patient_model.dart';
 import 'package:smart_care/features/doctor/patients/view/widgets/info_pill.dart';
+import 'package:smart_care/features/doctor/profile/cubit/profile_cubit.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class PatientCard extends StatelessWidget {
   final DoctorPatient patient;
@@ -34,14 +36,50 @@ class PatientCard extends StatelessWidget {
     }
   }
 
+  void _openChat(BuildContext context) {
+    final lastAppt = patient.lastAppointment;
+    if (lastAppt == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No appointment found for this patient.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Get the doctor's staff profile ID as the current user
+    final medStaff = context.read<MedicalStaffCubit>().medicalStaffProfile;
+    final doctorProfileId = medStaff?.id ?? lastAppt.staffProfileId;
+
+    Navigator.pushNamed(
+      context,
+      Routes.chatScreen,
+      arguments: {
+        'appointmentId': lastAppt.id,
+        'currentUserId': doctorProfileId,
+        'otherUserId': patient.profile.id,
+        'otherUserName': patient.displayName,
+        'otherUserRole': 'Patient',
+        'otherUserAvatar': null,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isCritical = patient.status == 'CRITICAL';
     final initials = patient.displayName.isNotEmpty
-        ? patient.displayName[0].toUpperCase()
+        ? patient.displayName
+            .split(' ')
+            .where((w) => w.isNotEmpty)
+            .take(2)
+            .map((w) => w[0].toUpperCase())
+            .join()
         : 'P';
     final bloodType = patient.profile.bloodType?.value;
     final allergiesCount = patient.profile.allergies.length;
+    final hasAppointment = patient.lastAppointment != null;
 
     return Container(
       decoration: BoxDecoration(
@@ -49,7 +87,7 @@ class PatientCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isCritical
-              ? AppColors.critical.withOpacity(0.3)
+              ? AppColors.critical.withValues(alpha: 0.3)
               : AppColors.border,
         ),
       ),
@@ -57,16 +95,18 @@ class PatientCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Header row ──────────────────────────────────────────────────
           Row(
             children: [
               CircleAvatar(
                 radius: 22,
-                backgroundColor: AppColors.primary.withOpacity(0.1),
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                 child: Text(
                   initials,
                   style: AppTextStyles.body.copyWith(
                     fontWeight: FontWeight.w700,
                     color: AppColors.primary,
+                    fontSize: 13,
                   ),
                 ),
               ),
@@ -112,6 +152,8 @@ class PatientCard extends StatelessWidget {
               ),
             ],
           ),
+
+          // ── Info pills ──────────────────────────────────────────────────
           const SizedBox(height: 10),
           Row(
             children: [
@@ -125,6 +167,8 @@ class PatientCard extends StatelessWidget {
               ],
             ],
           ),
+
+          // ── Allergy warning ─────────────────────────────────────────────
           if (allergiesCount > 0) ...[
             const SizedBox(height: 6),
             Row(
@@ -134,13 +178,16 @@ class PatientCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   '$allergiesCount allerg${allergiesCount == 1 ? 'y' : 'ies'}',
-                  style: AppTextStyles.caption
-                      .copyWith(color: AppColors.critical),
+                  style:
+                      AppTextStyles.caption.copyWith(color: AppColors.critical),
                 ),
               ],
             ),
           ],
+
           const SizedBox(height: 12),
+
+          // ── Emergency button (critical only) ────────────────────────────
           if (isCritical) ...[
             SizedBox(
               width: double.infinity,
@@ -157,7 +204,7 @@ class PatientCard extends StatelessWidget {
                 ),
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(
-                      color: AppColors.critical.withOpacity(0.4)),
+                      color: AppColors.critical.withValues(alpha: 0.4)),
                   backgroundColor: AppColors.criticalLight,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
@@ -167,32 +214,58 @@ class PatientCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  Routes.patientDetailScreen,
-                  arguments: patient,
-                );
-              },
-              icon: const Icon(Icons.history_rounded,
-                  size: 16, color: AppColors.primary),
-              label: Text(
-                'View Full History',
-                style: AppTextStyles.body.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
+
+          // ── Action row: Chat + View History ─────────────────────────────
+          Row(
+            children: [
+              // Chat button
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: hasAppointment ? () => _openChat(context) : null,
+                  icon: const Icon(Icons.chat_bubble_outline_rounded,
+                      size: 15),
+                  label: const Text('Chat'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.border),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.04),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    textStyle: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
               ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.border),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
+              const SizedBox(width: 8),
+              // View history button
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      Routes.patientDetailScreen,
+                      arguments: patient,
+                    );
+                  },
+                  icon: const Icon(Icons.history_rounded, size: 15),
+                  label: const Text('History'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    textStyle: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),

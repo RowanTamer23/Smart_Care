@@ -19,7 +19,6 @@ class _LoginScreenState extends State<LoginScreen>
   final _passCtrl = TextEditingController();
   bool _obscure = true;
   bool _keepLoggedIn = false;
-  bool _isLoading = false;
   final _formKey = GlobalKey<FormState>();
 
   late AnimationController _animCtrl;
@@ -47,28 +46,12 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
-  void _login() async {
-    final loginCubit = context.read<LoginCubit>();
-    loginCubit.login(email: _emailCtrl.text, password: _passCtrl.text);
+  void _login() {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      // Navigate to a success state or home
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Login successful! Welcome back.',
-            style: GoogleFonts.dmSans(),
-          ),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    }
+    context.read<LoginCubit>().login(
+          email: _emailCtrl.text.trim(),
+          password: _passCtrl.text,
+        );
   }
 
   @override
@@ -273,8 +256,8 @@ class _LoginScreenState extends State<LoginScreen>
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton.icon(
-                                  onPressed: _isLoading ? null : _login,
-                                  icon: _isLoading
+                                  onPressed: state is LoginLoading ? null : _login,
+                                  icon: state is LoginLoading
                                       ? const SizedBox(
                                           width: 18,
                                           height: 18,
@@ -286,7 +269,7 @@ class _LoginScreenState extends State<LoginScreen>
                                       : const Icon(Icons.login_rounded,
                                           color: Colors.white, size: 20),
                                   label: Text(
-                                    _isLoading
+                                    state is LoginLoading
                                         ? 'Logging in...'
                                         : 'Login to Dashboard',
                                     style: GoogleFonts.dmSans(

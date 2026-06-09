@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart'; // Import the enums from above
+import 'package:flutter/material.dart';
 
 enum AppointmentStatus {
   pending,
@@ -45,6 +45,7 @@ class Appointment {
   final AppointmentCareType? careType;
   final String? videoRoomUrl;
   final String? patientName; // Joined from patient_profiles table
+  final String? doctorName; // Joined from medical_staff_profiles -> profiles
 
   Appointment({
     required this.id,
@@ -58,6 +59,7 @@ class Appointment {
     this.careType,
     this.videoRoomUrl,
     this.patientName,
+    this.doctorName,
   });
 
   /// Creates a copy of this object with the given fields replaced.
@@ -73,6 +75,7 @@ class Appointment {
     AppointmentCareType? careType,
     String? videoRoomUrl,
     String? patientName,
+    String? doctorName,
   }) {
     return Appointment(
       id: id ?? this.id,
@@ -86,11 +89,21 @@ class Appointment {
       careType: careType ?? this.careType,
       videoRoomUrl: videoRoomUrl ?? this.videoRoomUrl,
       patientName: patientName ?? this.patientName,
+      doctorName: doctorName ?? this.doctorName,
     );
   }
 
   /// Converts a Map (JSON) payload from Supabase into this Dart object.
   factory Appointment.fromMap(Map<String, dynamic> map) {
+    // Attempt to parse doctor's name if joined via medical_staff_profiles (doctor) -> profiles
+    String? docName;
+    if (map['doctor'] != null) {
+      final doctorMap = map['doctor'] as Map<String, dynamic>;
+      if (doctorMap['profiles'] != null) {
+        docName = (doctorMap['profiles'] as Map<String, dynamic>)['full_name'] as String?;
+      }
+    }
+
     return Appointment(
       id: map['id'] as String,
       patientProfileId: map['patient_profile_id'] as String,
@@ -110,6 +123,7 @@ class Appointment {
       patientName: map['patient'] != null
           ? (map['patient'] as Map<String, dynamic>)['full_name'] as String?
           : null,
+      doctorName: docName,
     );
   }
 

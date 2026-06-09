@@ -97,7 +97,7 @@ class SignUpCubit extends Cubit<SignUpState> {
         supportsVideo: supportsVideo,
         supportsHomeVisit: supportsHomeVisit,
         languages: languages,
-        licenseNumber: licenseCtrl.text,
+        licenseNumber: licenseNumber ?? '',
       );
       emit(MedicalProfileSuccess(userId: userId));
     } catch (e) {

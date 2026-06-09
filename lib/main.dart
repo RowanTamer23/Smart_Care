@@ -12,6 +12,8 @@ import 'package:smart_care/features/doctor/schedule/cubit/appointment_cubit.dart
 import 'package:smart_care/features/doctor/schedule/data/repository/appointment_repository.dart';
 import 'package:smart_care/features/doctor/patients/cubit/doctor_patients_cubit.dart';
 import 'package:smart_care/features/doctor/patients/data/repository/doctor_patients_repository.dart';
+import 'package:smart_care/features/patient/profile/cubit/patient_profile_cubit.dart';
+import 'package:smart_care/features/patient/profile/data/repository/patient_profile_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:smart_care/features/auth/cubit/auth_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -54,6 +56,9 @@ void main() async {
         BlocProvider(
             create: (context) =>
                 DoctorPatientsCubit(DoctorPatientsRepository())),
+        BlocProvider(
+            create: (context) =>
+                PatientProfileCubit(PatientProfileRepository())),
       ],
       child: const SmartCareApp(),
     ),

@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:smart_care/core/routes/routes.dart';
 import 'package:smart_care/core/shared/theme/theme2.dart';
+import 'package:smart_care/features/doctor/profile/cubit/profile_cubit.dart';
 import 'package:smart_care/features/doctor/schedule/cubit/appointment_state.dart';
 import 'package:smart_care/features/doctor/schedule/data/model/appointment_model.dart';
 import 'package:smart_care/features/doctor/schedule/view/widgets/schedule_item.dart';
+import 'package:smart_care/features/patient/profile/cubit/patient_profile_cubit.dart';
+import 'package:smart_care/features/patient/profile/cubit/patient_profile_state.dart';
 
 class ScheduleAppointmentsList extends StatelessWidget {
   final DateTime selectedDate;
   final List<Appointment> filtered;
   final AppointmentState state;
+  final String? role;
 
   const ScheduleAppointmentsList({
     super.key,
     required this.selectedDate,
     required this.filtered,
     required this.state,
+    this.role,
   });
 
   String _formatTimeOfDay(TimeOfDay time) {
@@ -23,11 +30,52 @@ class ScheduleAppointmentsList extends StatelessWidget {
     return '$hour:$minute $period';
   }
 
+  /// Opens ChatScreen with the correct IDs for both doctor and patient sides.
+  void _openChat(BuildContext context, Appointment a) {
+    final isPatient = role == 'patient';
+
+    String currentProfileId;
+    String otherProfileId;
+    String otherName;
+    String otherRole;
+
+    if (isPatient) {
+      // Patient → doctor: read current patient profile from cubit
+      final patientState = context.read<PatientProfileCubit>().state;
+      currentProfileId = patientState is PatientProfileLoaded
+          ? patientState.profile.id
+          : a.patientProfileId;
+      otherProfileId = a.staffProfileId;
+      otherName = a.doctorName ?? 'Doctor';
+      otherRole = 'Doctor';
+    } else {
+      // Doctor → patient: read doctor staff profile from cubit
+      final medStaff = context.read<MedicalStaffCubit>().medicalStaffProfile;
+      currentProfileId = medStaff?.id ?? a.staffProfileId;
+      otherProfileId = a.patientProfileId;
+      otherName = a.patientName ?? 'Patient';
+      otherRole = 'Patient';
+    }
+
+    Navigator.pushNamed(
+      context,
+      Routes.chatScreen,
+      arguments: {
+        'appointmentId': a.id,
+        'currentUserId': currentProfileId,
+        'otherUserId': otherProfileId,
+        'otherUserName': otherName,
+        'otherUserRole': otherRole,
+        'otherUserAvatar': null,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     final dateStr = '${months[selectedDate.month - 1]} ${selectedDate.day}';
 
@@ -36,6 +84,7 @@ class ScheduleAppointmentsList extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Header ────────────────────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -54,14 +103,15 @@ class ScheduleAppointmentsList extends StatelessWidget {
                         style: AppTextStyles.bodySmall
                             .copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(width: 4),
-                    const Icon(Icons.tune,
-                        size: 14, color: AppColors.textMuted),
+                    const Icon(Icons.tune, size: 14, color: AppColors.textMuted),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
+
+          // ── Content ───────────────────────────────────────────────────────
           if (state is AppointmentLoading && filtered.isEmpty)
             const Center(
               child: Padding(
@@ -75,14 +125,16 @@ class ScheduleAppointmentsList extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 20.0),
                 child: Text(
                   'Failed to load appointments: ${(state as AppointmentFailure).error}',
-                  style: AppTextStyles.body.copyWith(color: AppColors.critical),
+                  style:
+                      AppTextStyles.body.copyWith(color: AppColors.critical),
                 ),
               ),
             )
           else if (filtered.isEmpty)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -91,7 +143,8 @@ class ScheduleAppointmentsList extends StatelessWidget {
               child: Column(
                 children: [
                   Icon(Icons.event_available_rounded,
-                      size: 48, color: AppColors.textMuted.withOpacity(0.5)),
+                      size: 48,
+                      color: AppColors.textMuted.withValues(alpha: 0.5)),
                   const SizedBox(height: 12),
                   Text(
                     'No appointments scheduled',
@@ -117,26 +170,46 @@ class ScheduleAppointmentsList extends StatelessWidget {
                 final isCancelled = a.status == AppointmentStatus.cancelled ||
                     a.status == AppointmentStatus.rejected;
 
-                // Get patient initials
-                final name = a.patientName ?? 'Unknown Patient';
-                final initials =
-                    name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'P';
+                final isPatient = role == 'patient';
+                final name = isPatient
+                    ? (a.doctorName ?? 'Unknown Doctor')
+                    : (a.patientName ?? 'Unknown Patient');
+                final initials = name.isNotEmpty
+                    ? name.substring(0, 1).toUpperCase()
+                    : (isPatient ? 'D' : 'P');
 
-                // Format care type
                 final typeStr = a.careType != null
                     ? '${a.careType!.value[0].toUpperCase()}${a.careType!.value.substring(1)}'
                     : 'In-person';
 
-                return ScheduleItem(
-                  time: formattedTime,
-                  name: name,
-                  typeProcedure: '$typeStr • ${a.notes ?? 'General Check-up'}',
-                  isCompleted: isCompleted,
-                  isConfirmed: isConfirmed,
-                  isPending: isPending,
-                  isCancelled: isCancelled,
-                  hasAvatar: true,
-                  avatarLetter: initials,
+                // Chat is only available for active (non-cancelled, non-completed) appointments
+                final canChat = !isCancelled && !isCompleted;
+
+                return GestureDetector(
+                  onTap: () {
+                    // Doctor tap → appointment approval screen
+                    if (role == 'doctor') {
+                      Navigator.pushNamed(
+                        context,
+                        Routes.appointmentApproval,
+                        arguments: a,
+                      );
+                    }
+                  },
+                  child: ScheduleItem(
+                    time: formattedTime,
+                    name: name,
+                    typeProcedure:
+                        '$typeStr • ${a.notes ?? 'General Check-up'}',
+                    isCompleted: isCompleted,
+                    isConfirmed: isConfirmed,
+                    isPending: isPending,
+                    isCancelled: isCancelled,
+                    hasAvatar: true,
+                    avatarLetter: initials,
+                    // Wire the chat button — null disables it (greyed out)
+                    onChatTap: canChat ? () => _openChat(context, a) : null,
+                  ),
                 );
               }).toList(),
             ),

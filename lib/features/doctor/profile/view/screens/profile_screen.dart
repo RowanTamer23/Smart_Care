@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_care/core/shared/theme/theme2.dart';
 import 'package:smart_care/core/routes/routes.dart';
 import 'package:smart_care/features/auth/cubit/auth_cubit.dart';
+import 'package:smart_care/features/auth/cubit/auth_state.dart';
 import 'package:smart_care/features/doctor/profile/cubit/profile_cubit.dart';
 import 'package:smart_care/features/doctor/profile/cubit/profile_state.dart';
 import 'package:smart_care/features/doctor/profile/view/widgets/build_profile_header.dart';
@@ -34,6 +35,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: SafeArea(
         child: MultiBlocListener(
             listeners: [
+              BlocListener<LogoutCubit, LogoutState>(
+                listener: (context, state) {
+                  if (state is LogoutSuccess) {
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      Routes.login,
+                      (route) => false,
+                    );
+                  } else if (state is LogoutError) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to logout: ${state.error}')),
+                    );
+                  }
+                },
+              ),
               BlocListener<MedicalStaffCubit, MedicalStaffState>(
                 listener: (context, state) {
                   if (state is MedicalStaffSuccess) {

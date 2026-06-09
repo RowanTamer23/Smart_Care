@@ -19,7 +19,7 @@ class SmartCareBottomNav extends StatelessWidget {
             _NavItem(icon: Icons.grid_view_rounded, label: 'Home'),
             _NavItem(icon: Icons.calendar_today_rounded, label: 'Schedule'),
             _NavItem(icon: Icons.people_rounded, label: 'Doctors'),
-            _NavItem(icon: Icons.inbox_rounded, label: 'Records'),
+            // _NavItem(icon: Icons.inbox_rounded, label: 'Records'),
             _NavItem(icon: Icons.person_rounded, label: 'Profile'),
           ]
         : [

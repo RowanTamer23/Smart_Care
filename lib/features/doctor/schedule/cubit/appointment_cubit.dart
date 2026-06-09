@@ -20,4 +20,45 @@ class AppointmentCubit extends Cubit<AppointmentState> {
       emit(AppointmentFailure(e.toString()));
     }
   }
+
+  /// Fetches patient's appointments from Supabase database.
+  Future<void> getPatientAppointments(String patientProfileId) async {
+    emit(AppointmentLoading());
+    try {
+      appointments = await _repository.getPatientAppointments(patientProfileId);
+      emit(AppointmentSuccess(List.from(appointments)));
+    } catch (e) {
+      emit(AppointmentFailure(e.toString()));
+    }
+  }
+
+  /// Books a new appointment and updates state.
+  Future<void> bookAppointment(Appointment appointment) async {
+    emit(AppointmentLoading());
+    try {
+      await _repository.bookAppointment(appointment);
+      // Re-fetch patient appointments to make sure list is updated
+      appointments = await _repository.getPatientAppointments(appointment.patientProfileId);
+      emit(AppointmentSuccess(List.from(appointments)));
+    } catch (e) {
+      emit(AppointmentFailure(e.toString()));
+    }
+  }
+
+  /// Updates appointment status and refreshes the list.
+  Future<void> updateAppointmentStatus({
+    required String appointmentId,
+    required AppointmentStatus status,
+    required String staffProfileId,
+  }) async {
+    emit(AppointmentLoading());
+    try {
+      await _repository.updateAppointmentStatus(appointmentId, status);
+      // Re-fetch doctor appointments to update local state
+      appointments = await _repository.getAppointments(staffProfileId);
+      emit(AppointmentSuccess(List.from(appointments)));
+    } catch (e) {
+      emit(AppointmentFailure(e.toString()));
+    }
+  }
 }

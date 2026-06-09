@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smart_care/core/shared/theme/theme2.dart';
 import 'package:smart_care/features/doctor/schedule/cubit/appointment_state.dart';
 import 'package:smart_care/features/doctor/schedule/data/model/appointment_model.dart';
+import 'package:smart_care/core/routes/routes.dart';
 import 'package:smart_care/features/doctor/home/view/widgets/appointment_item.dart';
 
 class TodayScheduleList extends StatelessWidget {
@@ -108,14 +109,23 @@ class TodayScheduleList extends StatelessWidget {
                     ? '${a.careType!.value[0].toUpperCase()}${a.careType!.value.substring(1)}'
                     : 'In-person';
 
-                return AppointmentItem(
-                  time: formattedTime,
-                  name: a.patientName ?? 'Unknown Patient',
-                  procedure: '$typeStr • ${a.notes ?? 'General check-up'}',
-                  showStart: isConfirmed,
-                  isCompleted: isCompleted,
-                  isPending: isPending,
-                  isCancelled: isCancelled,
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      Routes.appointmentApproval,
+                      arguments: a,
+                    );
+                  },
+                  child: AppointmentItem(
+                    time: formattedTime,
+                    name: a.patientName ?? 'Unknown Patient',
+                    procedure: '$typeStr • ${a.notes ?? 'General check-up'}',
+                    showStart: isConfirmed,
+                    isCompleted: isCompleted,
+                    isPending: isPending,
+                    isCancelled: isCancelled,
+                  ),
                 );
               },
             ),

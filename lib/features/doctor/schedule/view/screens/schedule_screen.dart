@@ -5,11 +5,12 @@ import 'package:smart_care/features/doctor/profile/cubit/profile_cubit.dart';
 import 'package:smart_care/features/doctor/profile/cubit/profile_state.dart';
 import 'package:smart_care/features/doctor/schedule/cubit/appointment_cubit.dart';
 import 'package:smart_care/features/doctor/schedule/cubit/appointment_state.dart';
-import 'package:smart_care/features/doctor/schedule/data/model/appointment_model.dart';
 import 'package:smart_care/features/doctor/schedule/view/widgets/calendar_header.dart';
 import 'package:smart_care/features/doctor/schedule/view/widgets/week_strip.dart';
 import 'package:smart_care/features/doctor/schedule/view/widgets/schedule_load_card.dart';
 import 'package:smart_care/features/doctor/schedule/view/widgets/schedule_appointments_list.dart';
+import 'package:smart_care/features/patient/profile/cubit/patient_profile_cubit.dart';
+import 'package:smart_care/features/patient/profile/cubit/patient_profile_state.dart';
 
 class ScheduleScreen extends StatefulWidget {
   final String? role;
@@ -51,6 +52,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         }
       });
     }
+
+    if (widget.role == 'patient') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final patientCubit = context.read<PatientProfileCubit>();
+        final patientState = patientCubit.state;
+        if (patientState is PatientProfileLoaded) {
+          context.read<AppointmentCubit>().getPatientAppointments(patientState.profile.id);
+        }
+      });
+    }
   }
 
   void _onNavigation(int daysDiff) {
@@ -81,12 +92,23 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<MedicalStaffCubit, MedicalStaffState>(
-      listener: (context, state) {
-        if (state is MedicalStaffSuccess) {
-          context.read<AppointmentCubit>().getAppointments(state.medicalStaffProfile.id);
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<MedicalStaffCubit, MedicalStaffState>(
+          listener: (context, state) {
+            if (widget.role == 'doctor' && state is MedicalStaffSuccess) {
+              context.read<AppointmentCubit>().getAppointments(state.medicalStaffProfile.id);
+            }
+          },
+        ),
+        BlocListener<PatientProfileCubit, PatientProfileState>(
+          listener: (context, state) {
+            if (widget.role == 'patient' && state is PatientProfileLoaded) {
+              context.read<AppointmentCubit>().getPatientAppointments(state.profile.id);
+            }
+          },
+        ),
+      ],
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
@@ -129,6 +151,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         selectedDate: _selectedDate,
                         filtered: filtered,
                         state: state,
+                        role: widget.role,
+                      ),
+                    ] else if (widget.role == 'patient') ...[
+                      ScheduleAppointmentsList(
+                        selectedDate: _selectedDate,
+                        filtered: filtered,
+                        state: state,
+                        role: widget.role,
                       ),
                     ] else ...[
                       const SizedBox(height: 20),

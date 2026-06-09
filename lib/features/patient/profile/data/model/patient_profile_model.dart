@@ -6,10 +6,13 @@ enum PatientGender {
 
   static PatientGender? fromString(String? val) {
     if (val == null) return null;
-    return PatientGender.values.firstWhere(
-      (e) => e.name == val.toLowerCase(),
-      orElse: () => throw ArgumentError('Invalid blood type: $val'),
-    );
+    try {
+      return PatientGender.values.firstWhere(
+        (e) => e.name == val.toLowerCase(),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 }
 
@@ -28,10 +31,13 @@ enum BloodType {
 
   static BloodType? fromString(String? val) {
     if (val == null) return null;
-    return BloodType.values.firstWhere(
-      (e) => e.value.toUpperCase() == val.toUpperCase(),
-      orElse: () => throw ArgumentError('Invalid blood type: $val'),
-    );
+    try {
+      return BloodType.values.firstWhere(
+        (e) => e.value.toUpperCase() == val.toUpperCase(),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 }
 

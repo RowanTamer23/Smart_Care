@@ -2,18 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:smart_care/core/routes/routes.dart';
 import 'package:smart_care/features/patient/shared.dart';
 import 'package:smart_care/features/patient/theme3.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _Doctor {
   final String name, specialty, distance, rating;
   final Color avatarBg;
   final bool hasFilter;
-  const _Doctor(
-      {required this.name,
-      required this.specialty,
-      required this.distance,
-      required this.rating,
-      required this.avatarBg,
-      this.hasFilter = false});
+  final String? id;
+  final Map<String, dynamic>? rawData;
+
+  const _Doctor({
+    required this.name,
+    required this.specialty,
+    required this.distance,
+    required this.rating,
+    required this.avatarBg,
+    this.hasFilter = false,
+    this.id,
+    this.rawData,
+  });
 }
 
 const _doctors = [
@@ -54,6 +61,51 @@ class FindSpecialistScreen extends StatefulWidget {
 class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
   int _tab = 0;
   final _tabs = ['General', 'Dental', 'Cardiology'];
+  List<_Doctor> _displayDoctors = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDoctors();
+  }
+
+  Future<void> _loadDoctors() async {
+    try {
+      final res = await Supabase.instance.client
+          .from('medical_staff_profiles')
+          .select('*, profiles(full_name), specialties(name)');
+
+      final mapped = (res as List).map((item) {
+        final profile = item['profiles'] as Map<String, dynamic>?;
+        final specialty = item['specialties'] as Map<String, dynamic>?;
+        final years = item['years_experience'];
+        return _Doctor(
+          id: item['id'] as String,
+          name: profile?['full_name'] as String? ?? 'Unknown Doctor',
+          specialty: specialty?['name'] as String? ?? 'Medical Specialist',
+          distance: years != null ? '$years+ yrs exp' : '5+ yrs exp',
+          rating: '4.9',
+          avatarBg: const Color(0xFFCCFBF1),
+          rawData: item,
+        );
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _displayDoctors = mapped.isEmpty ? _doctors : mapped;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _displayDoctors = _doctors;
+          _loading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +114,7 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: SizedBox.shrink(),
+        leading: const SizedBox.shrink(),
         centerTitle: true,
         title: Text('Find a Specialist',
             style: AppText.display(20, color: AppColors.primary)),
@@ -94,12 +146,16 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
             ),
           ),
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: _doctors.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (ctx, i) => _DoctorCard(doctor: _doctors[i]),
-            ),
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary))
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _displayDoctors.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (ctx, i) =>
+                        _DoctorCard(doctor: _displayDoctors[i]),
+                  ),
           ),
         ],
       ),
@@ -172,6 +228,23 @@ class _DoctorCard extends StatelessWidget {
                               style: AppText.label(color: AppColors.textMuted)),
                           const Spacer(),
                           GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                Routes.doctorProfileScreen,
+                                arguments: doctor.rawData ??
+                                    {
+                                      'id': doctor.id ??
+                                          'f5a8703e-02ba-46a7-9215-163ef0c5a473',
+                                      'profiles': {'full_name': doctor.name},
+                                      'specialties': {'name': doctor.specialty},
+                                      'years_experience': 15,
+                                      'consultation_fee': 150.0,
+                                      'bio':
+                                          'Board-certified clinical specialist with years of medical experience.',
+                                    },
+                              );
+                            },
                             child: Text('View Profile',
                                 style: AppText.body(12,
                                     color: AppColors.primary,
@@ -195,7 +268,21 @@ class _DoctorCard extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, Routes.doctorProfileScreen);
+                      Navigator.pushNamed(
+                        context,
+                        Routes.doctorProfileScreen,
+                        arguments: doctor.rawData ??
+                            {
+                              'id': doctor.id ??
+                                  'f5a8703e-02ba-46a7-9215-163ef0c5a473',
+                              'profiles': {'full_name': doctor.name},
+                              'specialties': {'name': doctor.specialty},
+                              'years_experience': 15,
+                              'consultation_fee': 150.0,
+                              'bio':
+                                  'Board-certified clinical specialist with years of medical experience.',
+                            },
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
@@ -208,25 +295,6 @@ class _DoctorCard extends StatelessWidget {
                     child: Text('Book Visit',
                         style: AppText.body(14,
                             color: Colors.white, weight: FontWeight.w700)),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Icon(
-                    doctor.hasFilter
-                        ? Icons.tune_rounded
-                        : Icons.chat_bubble_outline_rounded,
-                    size: 18,
-                    color: doctor.hasFilter
-                        ? AppColors.accent
-                        : AppColors.textSecondary,
                   ),
                 ),
               ],
