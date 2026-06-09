@@ -79,7 +79,16 @@ class CPBottomNav extends StatelessWidget {
 class CPSearchBar extends StatelessWidget {
   final String hint;
   final Widget? trailing;
-  const CPSearchBar({super.key, required this.hint, this.trailing});
+  final ValueChanged<String>? onChanged;
+  final TextEditingController? controller;
+
+  const CPSearchBar({
+    super.key,
+    required this.hint,
+    this.trailing,
+    this.onChanged,
+    this.controller,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -103,8 +112,18 @@ class CPSearchBar extends StatelessWidget {
               color: AppColors.textMuted, size: 20),
           const SizedBox(width: 10),
           Expanded(
-            child:
-                Text(hint, style: AppText.body(14, color: AppColors.textMuted)),
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: AppText.body(14, color: AppColors.textMuted),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+              style: AppText.body(14, color: AppColors.textPrimary),
+            ),
           ),
           if (trailing != null) ...[trailing!, const SizedBox(width: 12)],
         ],

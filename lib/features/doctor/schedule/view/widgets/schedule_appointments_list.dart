@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_care/core/routes/routes.dart';
 import 'package:smart_care/core/shared/theme/theme2.dart';
-import 'package:smart_care/features/doctor/profile/cubit/profile_cubit.dart';
 import 'package:smart_care/features/doctor/schedule/cubit/appointment_state.dart';
 import 'package:smart_care/features/doctor/schedule/data/model/appointment_model.dart';
 import 'package:smart_care/features/doctor/schedule/view/widgets/schedule_item.dart';
-import 'package:smart_care/features/patient/profile/cubit/patient_profile_cubit.dart';
-import 'package:smart_care/features/patient/profile/cubit/patient_profile_state.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ScheduleAppointmentsList extends StatelessWidget {
   final DateTime selectedDate;
@@ -34,28 +31,15 @@ class ScheduleAppointmentsList extends StatelessWidget {
   void _openChat(BuildContext context, Appointment a) {
     final isPatient = role == 'patient';
 
-    String currentProfileId;
-    String otherProfileId;
-    String otherName;
-    String otherRole;
-
-    if (isPatient) {
-      // Patient → doctor: read current patient profile from cubit
-      final patientState = context.read<PatientProfileCubit>().state;
-      currentProfileId = patientState is PatientProfileLoaded
-          ? patientState.profile.id
-          : a.patientProfileId;
-      otherProfileId = a.staffProfileId;
-      otherName = a.doctorName ?? 'Doctor';
-      otherRole = 'Doctor';
-    } else {
-      // Doctor → patient: read doctor staff profile from cubit
-      final medStaff = context.read<MedicalStaffCubit>().medicalStaffProfile;
-      currentProfileId = medStaff?.id ?? a.staffProfileId;
-      otherProfileId = a.patientProfileId;
-      otherName = a.patientName ?? 'Patient';
-      otherRole = 'Patient';
-    }
+    // Use authentic profiles.id (Auth user ID) for the chat endpoints
+    final currentProfileId = Supabase.instance.client.auth.currentUser?.id ?? '';
+    final otherProfileId = isPatient
+        ? (a.doctorAuthId ?? a.staffProfileId)
+        : (a.patientAuthId ?? a.patientProfileId);
+    final otherName = isPatient
+        ? (a.doctorName ?? 'Doctor')
+        : (a.patientName ?? 'Patient');
+    final otherRole = isPatient ? 'Doctor' : 'Patient';
 
     Navigator.pushNamed(
       context,
@@ -200,7 +184,7 @@ class ScheduleAppointmentsList extends StatelessWidget {
                     time: formattedTime,
                     name: name,
                     typeProcedure:
-                        '$typeStr • ${a.notes ?? 'General Check-up'}',
+                        '$typeStr • ${a.notesText}',
                     isCompleted: isCompleted,
                     isConfirmed: isConfirmed,
                     isPending: isPending,

@@ -120,7 +120,7 @@ class TodayScheduleList extends StatelessWidget {
                   child: AppointmentItem(
                     time: formattedTime,
                     name: a.patientName ?? 'Unknown Patient',
-                    procedure: '$typeStr • ${a.notes ?? 'General check-up'}',
+                    procedure: '$typeStr • ${a.notesText}',
                     showStart: isConfirmed,
                     isCompleted: isCompleted,
                     isPending: isPending,

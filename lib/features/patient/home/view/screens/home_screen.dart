@@ -9,6 +9,7 @@ import 'package:smart_care/features/patient/profile/cubit/patient_profile_state.
 import 'package:smart_care/features/doctor/schedule/cubit/appointment_cubit.dart';
 import 'package:smart_care/features/doctor/schedule/cubit/appointment_state.dart';
 import 'package:smart_care/features/doctor/schedule/data/model/appointment_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PatientHomeScreen extends StatelessWidget {
   final VoidCallback? onBookPressed;
@@ -52,7 +53,7 @@ class PatientHomeScreen extends StatelessWidget {
               const SizedBox(height: 20),
               _buildUpcomingCard(context),
               const SizedBox(height: 20),
-              _buildHealthInsights(),
+              _buildTodaysAppointments(context),
               const SizedBox(height: 20),
               _buildQuickActions(context),
               const SizedBox(height: 20),
@@ -331,45 +332,37 @@ class PatientHomeScreen extends StatelessWidget {
                   const SizedBox(width: 10),
                   // Message doctor button
                   Expanded(
-                    child: BlocBuilder<PatientProfileCubit, PatientProfileState>(
-                      builder: (context, profileState) {
-                        final patientProfileId =
-                            profileState is PatientProfileLoaded
-                                ? profileState.profile.id
-                                : appt.patientProfileId;
-                        return OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.pushNamed(
-                              context,
-                              Routes.chatScreen,
-                              arguments: {
-                                'appointmentId': appt.id,
-                                'currentUserId': patientProfileId,
-                                'otherUserId': appt.staffProfileId,
-                                'otherUserName': docName,
-                                'otherUserRole': 'Doctor',
-                                'otherUserAvatar': null,
-                              },
-                            );
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pushNamed(
+                          context,
+                          Routes.chatScreen,
+                          arguments: {
+                            'appointmentId': appt.id,
+                            'currentUserId': Supabase.instance.client.auth.currentUser?.id ?? '',
+                            'otherUserId': appt.doctorAuthId ?? appt.staffProfileId,
+                            'otherUserName': docName,
+                            'otherUserRole': 'Doctor',
+                            'otherUserAvatar': null,
                           },
-                          icon: const Icon(
-                              Icons.chat_bubble_outline_rounded,
-                              size: 16),
-                          label: const Text('Message'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            side: BorderSide(
-                                color:
-                                    Colors.white.withValues(alpha: 0.4)),
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            textStyle:
-                                AppText.body(13, weight: FontWeight.w700),
-                          ),
                         );
                       },
+                      icon: const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          size: 16),
+                      label: const Text('Message'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: BorderSide(
+                            color:
+                                Colors.white.withValues(alpha: 0.4)),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        textStyle:
+                            AppText.body(13, weight: FontWeight.w700),
+                      ),
                     ),
                   ),
                 ],
@@ -381,65 +374,172 @@ class PatientHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHealthInsights() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildTodaysAppointments(BuildContext context) {
+    return BlocBuilder<AppointmentCubit, AppointmentState>(
+      builder: (context, state) {
+        final appointments = context.read<AppointmentCubit>().appointments;
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+
+        // Filter appointments that are scheduled for today
+        final todaysAppts = appointments.where((appt) {
+          final apptDate = DateTime(
+            appt.appointmentDate.year,
+            appt.appointmentDate.month,
+            appt.appointmentDate.day,
+          );
+          // Match exactly today's date
+          final isToday = apptDate == today;
+          final isActive = appt.status == AppointmentStatus.pending ||
+              appt.status == AppointmentStatus.confirmed ||
+              appt.status == AppointmentStatus.completed;
+          return isToday && isActive;
+        }).toList();
+
+        // Sort ascending by time
+        todaysAppts.sort((a, b) {
+          final dtA = DateTime(a.appointmentDate.year, a.appointmentDate.month, a.appointmentDate.day, a.appointmentTime.hour, a.appointmentTime.minute);
+          final dtB = DateTime(b.appointmentDate.year, b.appointmentDate.month, b.appointmentDate.day, b.appointmentTime.hour, b.appointmentTime.minute);
+          return dtA.compareTo(dtB);
+        });
+
+        return Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Health Insights', style: AppText.display(16)),
-              const Icon(Icons.favorite_rounded,
-                  color: AppColors.red, size: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Today\'s Appointments', style: AppText.display(16)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${todaysAppts.length}',
+                      style: AppText.body(12, color: AppColors.primary, weight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              if (todaysAppts.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        const Icon(Icons.event_busy_rounded, size: 36, color: AppColors.textMuted),
+                        const SizedBox(height: 10),
+                        Text(
+                          'No appointments scheduled for today.',
+                          style: AppText.body(13, color: AppColors.textSecondary, weight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: todaysAppts.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final appt = todaysAppts[index];
+                    final time = appt.appointmentTime;
+                    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+                    final minute = time.minute.toString().padLeft(2, '0');
+                    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+                    final docName = appt.doctorName ?? 'Clinical Doctor';
+                    final careTypeStr = appt.careType != null
+                        ? '${appt.careType!.value[0].toUpperCase()}${appt.careType!.value.substring(1)}'
+                        : 'In-person';
+
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '$hour:$minute',
+                                  style: AppText.body(13, color: Colors.white, weight: FontWeight.w800),
+                                ),
+                                Text(
+                                  period,
+                                  style: AppText.label(color: Colors.white70, size: 10),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  docName,
+                                  style: AppText.body(14, weight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '$careTypeStr Consultation',
+                                  style: AppText.label(color: AppColors.textSecondary, size: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Status Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: appt.status == AppointmentStatus.confirmed
+                                  ? AppColors.green.withOpacity(0.08)
+                                  : AppColors.orange.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              appt.status.name.toUpperCase(),
+                              style: AppText.label(
+                                color: appt.status == AppointmentStatus.confirmed
+                                    ? AppColors.green
+                                    : AppColors.orange,
+                                size: 9,
+                                weight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _VitalTile(
-                  label: 'Blood Pressure',
-                  value: '120/80',
-                  unit: 'mm Hg',
-                  color: AppColors.blue,
-                  bg: AppColors.blueLight,
-                  icon: Icons.favorite_border_rounded,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _VitalTile(
-                  label: 'Heart Rate',
-                  value: '72',
-                  unit: 'bpm',
-                  color: AppColors.green,
-                  bg: AppColors.greenLight,
-                  icon: Icons.monitor_heart_outlined,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          // Mini sparkline
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: SizedBox(
-              height: 40,
-              child: CustomPaint(
-                painter: _SparklinePainter(),
-                child: const SizedBox.expand(),
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -507,50 +607,7 @@ class PatientHomeScreen extends StatelessWidget {
 
 // ── Supporting Widgets ──────────────────────────────────────────────────────
 
-class _VitalTile extends StatelessWidget {
-  final String label, value, unit;
-  final Color color, bg;
-  final IconData icon;
-  const _VitalTile(
-      {required this.label,
-      required this.value,
-      required this.unit,
-      required this.color,
-      required this.bg,
-      required this.icon});
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(value, style: AppText.display(22, color: color)),
-              const SizedBox(width: 3),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text(unit,
-                    style:
-                        AppText.label(color: color.withOpacity(0.7), size: 10)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(label,
-              style: AppText.label(color: color.withOpacity(0.8), size: 10)),
-        ],
-      ),
-    );
-  }
-}
 
 class _QuickAction extends StatelessWidget {
   final IconData icon;
@@ -649,28 +706,4 @@ class _RecordTile extends StatelessWidget {
   }
 }
 
-class _SparklinePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.teal
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
 
-    final points = [0.7, 0.5, 0.65, 0.4, 0.55, 0.45, 0.6, 0.35, 0.5, 0.6];
-    final path = Path();
-    for (int i = 0; i < points.length; i++) {
-      final x = i / (points.length - 1) * size.width;
-      final y = (1 - points[i]) * size.height;
-      if (i == 0)
-        path.moveTo(x, y);
-      else
-        path.lineTo(x, y);
-    }
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

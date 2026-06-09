@@ -3,8 +3,7 @@ import 'package:smart_care/core/routes/routes.dart';
 import 'package:smart_care/core/shared/theme/theme2.dart';
 import 'package:smart_care/features/doctor/patients/data/model/doctor_patient_model.dart';
 import 'package:smart_care/features/doctor/patients/view/widgets/info_pill.dart';
-import 'package:smart_care/features/doctor/profile/cubit/profile_cubit.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PatientCard extends StatelessWidget {
   final DoctorPatient patient;
@@ -48,17 +47,16 @@ class PatientCard extends StatelessWidget {
       return;
     }
 
-    // Get the doctor's staff profile ID as the current user
-    final medStaff = context.read<MedicalStaffCubit>().medicalStaffProfile;
-    final doctorProfileId = medStaff?.id ?? lastAppt.staffProfileId;
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id ?? '';
+    final otherUserId = patient.profile.profileId;
 
     Navigator.pushNamed(
       context,
       Routes.chatScreen,
       arguments: {
         'appointmentId': lastAppt.id,
-        'currentUserId': doctorProfileId,
-        'otherUserId': patient.profile.id,
+        'currentUserId': currentUserId,
+        'otherUserId': otherUserId,
         'otherUserName': patient.displayName,
         'otherUserRole': 'Patient',
         'otherUserAvatar': null,

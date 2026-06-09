@@ -9,7 +9,7 @@ class AppointmentRepository {
     try {
       final res = await _supabase
           .from('appointments')
-          .select('*, patient:patient_profiles(*)')
+          .select('*, patient:patient_profiles(*, profiles(full_name))')
           .eq('staff_profile_id', staffProfileId)
           .order('appointment_date', ascending: true)
           .order('appointment_time', ascending: true);

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
 enum AppointmentStatus {
@@ -40,12 +41,14 @@ class Appointment {
   final DateTime appointmentDate; // Maps to PostgreSQL 'date'
   final TimeOfDay appointmentTime; // Maps to PostgreSQL 'time'
   final AppointmentStatus status;
-  final String? notes;
+  final Map<String, dynamic>? notes;
   final DateTime createdAt;
   final AppointmentCareType? careType;
   final String? videoRoomUrl;
   final String? patientName; // Joined from patient_profiles table
   final String? doctorName; // Joined from medical_staff_profiles -> profiles
+  final String? patientAuthId; // User ID from profiles table
+  final String? doctorAuthId;  // User ID from profiles table
 
   Appointment({
     required this.id,
@@ -60,7 +63,14 @@ class Appointment {
     this.videoRoomUrl,
     this.patientName,
     this.doctorName,
+    this.patientAuthId,
+    this.doctorAuthId,
   });
+
+  String get notesText {
+    if (notes == null) return 'General Check-up';
+    return notes!['notes'] as String? ?? notes!['symptoms'] as String? ?? 'General Check-up';
+  }
 
   /// Creates a copy of this object with the given fields replaced.
   Appointment copyWith({
@@ -70,12 +80,14 @@ class Appointment {
     DateTime? appointmentDate,
     TimeOfDay? appointmentTime,
     AppointmentStatus? status,
-    String? notes,
+    Map<String, dynamic>? notes,
     DateTime? createdAt,
     AppointmentCareType? careType,
     String? videoRoomUrl,
     String? patientName,
     String? doctorName,
+    String? patientAuthId,
+    String? doctorAuthId,
   }) {
     return Appointment(
       id: id ?? this.id,
@@ -90,6 +102,8 @@ class Appointment {
       videoRoomUrl: videoRoomUrl ?? this.videoRoomUrl,
       patientName: patientName ?? this.patientName,
       doctorName: doctorName ?? this.doctorName,
+      patientAuthId: patientAuthId ?? this.patientAuthId,
+      doctorAuthId: doctorAuthId ?? this.doctorAuthId,
     );
   }
 
@@ -97,10 +111,43 @@ class Appointment {
   factory Appointment.fromMap(Map<String, dynamic> map) {
     // Attempt to parse doctor's name if joined via medical_staff_profiles (doctor) -> profiles
     String? docName;
+    String? docAuthId;
     if (map['doctor'] != null) {
       final doctorMap = map['doctor'] as Map<String, dynamic>;
+      docAuthId = doctorMap['profile_id'] as String?;
       if (doctorMap['profiles'] != null) {
         docName = (doctorMap['profiles'] as Map<String, dynamic>)['full_name'] as String?;
+      }
+    }
+
+    String? patName;
+    String? patAuthId;
+    if (map['patient'] != null) {
+      final patientMap = map['patient'] as Map<String, dynamic>;
+      patAuthId = patientMap['profile_id'] as String?;
+      if (patientMap['profiles'] != null) {
+        patName = (patientMap['profiles'] as Map<String, dynamic>)['full_name'] as String?;
+      } else {
+        patName = patientMap['full_name'] as String?;
+      }
+    }
+
+    final notesVal = map['notes'];
+    Map<String, dynamic>? notesMap;
+    if (notesVal != null) {
+      if (notesVal is Map) {
+        notesMap = Map<String, dynamic>.from(notesVal);
+      } else if (notesVal is String) {
+        try {
+          final decoded = jsonDecode(notesVal);
+          if (decoded is Map) {
+            notesMap = Map<String, dynamic>.from(decoded);
+          } else {
+            notesMap = {'notes': notesVal};
+          }
+        } catch (_) {
+          notesMap = {'notes': notesVal};
+        }
       }
     }
 
@@ -112,7 +159,7 @@ class Appointment {
       appointmentTime: _parseTimeString(map['appointment_time'] as String),
       status:
           AppointmentStatus.fromString(map['status'] as String? ?? 'pending'),
-      notes: map['notes'] as String?,
+      notes: notesMap,
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String).toLocal()
           : DateTime.now(),
@@ -120,10 +167,10 @@ class Appointment {
           ? AppointmentCareType.fromString(map['care_type'] as String)
           : null,
       videoRoomUrl: map['video_room_url'] as String?,
-      patientName: map['patient'] != null
-          ? (map['patient'] as Map<String, dynamic>)['full_name'] as String?
-          : null,
+      patientName: patName,
       doctorName: docName,
+      patientAuthId: patAuthId,
+      doctorAuthId: docAuthId,
     );
   }
 
@@ -136,7 +183,7 @@ class Appointment {
       'appointment_date': _toDateString(appointmentDate),
       'appointment_time': _toTimeString(appointmentTime),
       'status': status.toShortString(),
-      'notes': notes,
+      'notes': notes != null ? jsonEncode(notes) : null,
       'created_at': createdAt.toIso8601String(),
       'care_type': careType?.value,
       'video_room_url': videoRoomUrl,

@@ -61,8 +61,12 @@ class FindSpecialistScreen extends StatefulWidget {
 class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
   int _tab = 0;
   final _tabs = ['General', 'Dental', 'Cardiology'];
+  List<String> _allSpecialties = [];
+  String? _selectedSpecialtyFilter;
+  List<_Doctor> _allDoctors = [];
   List<_Doctor> _displayDoctors = [];
   bool _loading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -74,7 +78,7 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
     try {
       final res = await Supabase.instance.client
           .from('medical_staff_profiles')
-          .select('*, profiles(full_name), specialties(name)');
+          .select('*, profiles(full_name, avatar_url), specialties(name)');
 
       final mapped = (res as List).map((item) {
         final profile = item['profiles'] as Map<String, dynamic>?;
@@ -91,20 +95,124 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
         );
       }).toList();
 
+      List<String> allSpecialtiesList = [];
+      try {
+        final specialtiesRes =
+            await Supabase.instance.client.from('specialties').select('name');
+        allSpecialtiesList = (specialtiesRes as List)
+            .map((item) => item['name'] as String? ?? '')
+            .where((name) => name.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+      } catch (e) {
+        debugPrint('Error loading specialties from table: $e');
+        // Fallback to specialties from loaded doctors
+        allSpecialtiesList = mapped.map((d) => d.specialty).toSet().toList()
+          ..sort();
+      }
+
       if (mounted) {
         setState(() {
-          _displayDoctors = mapped.isEmpty ? _doctors : mapped;
+          _allDoctors = mapped.isEmpty ? _doctors : mapped;
+          _allSpecialties = allSpecialtiesList;
           _loading = false;
+          _filterDoctors();
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _displayDoctors = _doctors;
+          _allDoctors = _doctors;
+          _allSpecialties = _allDoctors.map((d) => d.specialty).toSet().toList()
+            ..sort();
           _loading = false;
+          _filterDoctors();
         });
       }
     }
+  }
+
+  bool _isSpecialtyMatch(String docSpec, String selSpec) {
+    final cleanDoc =
+        docSpec.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '').trim();
+    final cleanSel =
+        selSpec.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '').trim();
+
+    if (cleanDoc == cleanSel) return true;
+    if (cleanDoc.contains(cleanSel) || cleanSel.contains(cleanDoc)) return true;
+
+    // Match roots (e.g. cardiology vs cardiologist, dentistry vs dentist)
+    if (cleanDoc.length >= 5 && cleanSel.length >= 5) {
+      final rootDoc = cleanDoc.substring(0, 5);
+      final rootSel = cleanSel.substring(0, 5);
+      if (rootDoc == rootSel) return true;
+    }
+
+    return false;
+  }
+
+  void _filterDoctors() {
+    final query = _searchQuery.toLowerCase().trim();
+
+    setState(() {
+      _displayDoctors = _allDoctors.where((doctor) {
+        // 1. Tab category filter
+        if (_tab == 1) {
+          // Dental filter
+          final specLower = doctor.specialty.toLowerCase();
+          final isDentist = specLower.contains('dent') ||
+              specLower.contains('ortho') ||
+              specLower.contains('oral') ||
+              specLower.contains('periodont') ||
+              specLower.contains('endodont') ||
+              specLower.contains('prosthodont');
+          if (!isDentist) return false;
+        } else if (_tab == 2) {
+          // Cardiology filter
+          final specLower = doctor.specialty.toLowerCase();
+          final isCardiologist =
+              specLower.contains('cardio') || specLower.contains('heart');
+          if (!isCardiologist) return false;
+        }
+
+        // 2. Specialty Bottom Sheet filter
+        if (_selectedSpecialtyFilter != null &&
+            !_isSpecialtyMatch(doctor.specialty, _selectedSpecialtyFilter!)) {
+          return false;
+        }
+
+        // 3. Search query filter
+        if (query.isNotEmpty) {
+          final nameMatches = doctor.name.toLowerCase().contains(query);
+          final specialtyMatches =
+              doctor.specialty.toLowerCase().contains(query);
+          if (!nameMatches && !specialtyMatches) {
+            return false;
+          }
+        }
+
+        return true;
+      }).toList();
+    });
+  }
+
+  void _showSpecialtyFilterBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _SpecialtyFilterBottomSheet(
+        specialties: _allSpecialties,
+        initialSelected: _selectedSpecialtyFilter,
+        onSelected: (val) {
+          setState(() {
+            _selectedSpecialtyFilter = val;
+            _filterDoctors();
+          });
+        },
+      ),
+    );
   }
 
   @override
@@ -126,20 +234,72 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Column(
               children: [
-                const CPSearchBar(hint: 'Search by specialty or name'),
-                const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: List.generate(
-                        _tabs.length,
-                        (i) => Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: CPChip(
-                                  label: _tabs[i],
-                                  active: i == _tab,
-                                  onTap: () => setState(() => _tab = i)),
-                            )),
+                CPSearchBar(
+                  hint: 'Search by specialty or name',
+                  onChanged: (val) {
+                    _searchQuery = val;
+                    _filterDoctors();
+                  },
+                  trailing: GestureDetector(
+                    onTap: () => _showSpecialtyFilterBottomSheet(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _selectedSpecialtyFilter != null
+                            ? AppColors.primary
+                            : AppColors.background,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _selectedSpecialtyFilter != null
+                              ? AppColors.primary
+                              : AppColors.border,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.tune_rounded,
+                            color: _selectedSpecialtyFilter != null
+                                ? Colors.white
+                                : AppColors.primary,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _selectedSpecialtyFilter != null
+                                ? (_selectedSpecialtyFilter!.length > 12
+                                    ? '${_selectedSpecialtyFilter!.substring(0, 10)}...'
+                                    : _selectedSpecialtyFilter!)
+                                : 'Filter',
+                            style: AppText.label(
+                              color: _selectedSpecialtyFilter != null
+                                  ? Colors.white
+                                  : AppColors.primary,
+                              size: 11,
+                              weight: FontWeight.bold,
+                            ),
+                          ),
+                          if (_selectedSpecialtyFilter != null) ...[
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedSpecialtyFilter = null;
+                                  _filterDoctors();
+                                });
+                              },
+                              child: const Icon(
+                                Icons.close_rounded,
+                                color: Colors.white,
+                                size: 12,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -149,13 +309,29 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
             child: _loading
                 ? const Center(
                     child: CircularProgressIndicator(color: AppColors.primary))
-                : ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _displayDoctors.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (ctx, i) =>
-                        _DoctorCard(doctor: _displayDoctors[i]),
-                  ),
+                : _displayDoctors.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.people_outline_rounded,
+                                size: 48, color: AppColors.textMuted),
+                            Text(
+                              'No specialists found',
+                              style: AppText.body(14,
+                                  color: AppColors.textSecondary,
+                                  weight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _displayDoctors.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (ctx, i) =>
+                            _DoctorCard(doctor: _displayDoctors[i]),
+                      ),
           ),
         ],
       ),
@@ -195,11 +371,35 @@ class _DoctorCard extends StatelessWidget {
                     color: doctor.avatarBg,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Icon(Icons.person_rounded,
-                      color: doctor.avatarBg.computeLuminance() > 0.5
-                          ? AppColors.primary
-                          : Colors.white,
-                      size: 36),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: (doctor.rawData?['profiles']?['avatar_url'] !=
+                                null &&
+                            (doctor.rawData?['profiles']?['avatar_url']
+                                    as String)
+                                .isNotEmpty)
+                        ? Image.network(
+                            doctor.rawData?['profiles']?['avatar_url']
+                                as String,
+                            width: 72,
+                            height: 72,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.person_rounded,
+                              color: doctor.avatarBg.computeLuminance() > 0.5
+                                  ? AppColors.primary
+                                  : Colors.white,
+                              size: 36,
+                            ),
+                          )
+                        : Icon(
+                            Icons.person_rounded,
+                            color: doctor.avatarBg.computeLuminance() > 0.5
+                                ? AppColors.primary
+                                : Colors.white,
+                            size: 36,
+                          ),
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -324,6 +524,129 @@ class _RatingBadge extends StatelessWidget {
           const Icon(Icons.star_rounded, size: 12, color: AppColors.accent),
           const SizedBox(width: 3),
           Text(rating, style: AppText.label(color: AppColors.accent, size: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SpecialtyFilterBottomSheet extends StatefulWidget {
+  final List<String> specialties;
+  final String? initialSelected;
+  final ValueChanged<String?> onSelected;
+
+  const _SpecialtyFilterBottomSheet({
+    required this.specialties,
+    required this.initialSelected,
+    required this.onSelected,
+  });
+
+  @override
+  State<_SpecialtyFilterBottomSheet> createState() =>
+      _SpecialtyFilterBottomSheetState();
+}
+
+class _SpecialtyFilterBottomSheetState
+    extends State<_SpecialtyFilterBottomSheet> {
+  String _search = '';
+  List<String> _filteredSpecialties = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredSpecialties = widget.specialties;
+  }
+
+  void _filter(String val) {
+    setState(() {
+      _search = val;
+      _filteredSpecialties = widget.specialties
+          .where((s) => s.toLowerCase().contains(val.toLowerCase()))
+          .toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.65,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Select Specialty', style: AppText.display(18)),
+                if (widget.initialSelected != null)
+                  TextButton(
+                    onPressed: () {
+                      widget.onSelected(null);
+                      Navigator.pop(context);
+                    },
+                    child: Text(
+                      'Clear Filter',
+                      style: AppText.body(13,
+                          color: AppColors.red, weight: FontWeight.w600),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: CPSearchBar(
+              hint: 'Search specialties...',
+              onChanged: _filter,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              itemCount: _filteredSpecialties.length,
+              itemBuilder: (context, index) {
+                final specialty = _filteredSpecialties[index];
+                final isSelected = specialty == widget.initialSelected;
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  title: Text(
+                    specialty,
+                    style: AppText.body(
+                      14,
+                      weight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(Icons.check_circle_rounded,
+                          color: AppColors.primary)
+                      : null,
+                  onTap: () {
+                    widget.onSelected(specialty);
+                    Navigator.pop(context);
+                  },
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
