@@ -7,17 +7,18 @@ class VideoCallPage extends StatelessWidget {
   final String userName; // Display name of the local user
 
   const VideoCallPage({
-    Key? key,
+    super.key,
     required this.callId,
     required this.userId,
     required this.userName,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return ZegoUIKitPrebuiltCall(
-      appID: 123456789, // Replace with your actual AppID (integer)
-      appSign: 'your_app_sign_string', // Replace with your actual AppSign
+      appID: 1877438367, // Replace with your actual AppID (integer)
+      appSign:
+          '6207afd6ad857c26d4f340bc176659583a7e5802c61b47dc6fcc36b4637ff9f6', // Replace with your actual AppSign
       userID: userId,
       userName: userName,
       callID: callId,

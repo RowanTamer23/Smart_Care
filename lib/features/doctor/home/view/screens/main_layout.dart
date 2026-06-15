@@ -105,10 +105,7 @@ class _MainLayoutState extends State<MainLayout> {
           listener: (context, state) {
             if (state is PatientProfileLoaded) {
               final patientId = state.profile.id;
-              final apptState = context.read<AppointmentCubit>().state;
-              if (apptState is AppointmentInitial) {
-                context.read<AppointmentCubit>().getPatientAppointments(patientId);
-              }
+              context.read<AppointmentCubit>().getPatientAppointments(patientId);
               _subscribeToAppointments(
                 'patient_profile_id',
                 patientId,
@@ -123,10 +120,7 @@ class _MainLayoutState extends State<MainLayout> {
           listener: (context, state) {
             if (state is MedicalStaffSuccess) {
               final staffId = state.medicalStaffProfile.id;
-              final apptState = context.read<AppointmentCubit>().state;
-              if (apptState is AppointmentInitial) {
-                context.read<AppointmentCubit>().getAppointments(staffId);
-              }
+              context.read<AppointmentCubit>().getAppointments(staffId);
               _subscribeToAppointments(
                 'staff_profile_id',
                 staffId,
@@ -150,6 +144,9 @@ class _MainLayoutState extends State<MainLayout> {
             setState(() {
               _currentIndex = index;
             });
+            if (index == 0 && widget.role == 'patient' && widget.profileId != null) {
+              context.read<PatientProfileCubit>().loadPatientProfile(widget.profileId!);
+            }
           },
           role: widget.role,
         ),

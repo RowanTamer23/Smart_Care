@@ -58,23 +58,47 @@ class PatientHomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 18),
-              _buildTopBar(context),
-              const SizedBox(height: 20),
-              _buildUpcomingCard(context),
-              const SizedBox(height: 20),
-              _buildTodaysAppointments(context),
-              const SizedBox(height: 20),
-              _buildQuickActions(context),
-              const SizedBox(height: 20),
-              _buildRecentRecords(context),
-              const SizedBox(height: 20),
-            ],
+        child: RefreshIndicator(
+          onRefresh: () async {
+            final patientState = context.read<PatientProfileCubit>().state;
+            if (patientState is PatientProfileLoaded) {
+              final patientId = patientState.profile.id;
+              await Future.wait([
+                context
+                    .read<AppointmentCubit>()
+                    .getPatientAppointments(patientId),
+                context
+                    .read<PatientProfileCubit>()
+                    .loadPatientProfile(patientState.profile.profileId),
+              ]);
+            } else {
+              final currentUser = Supabase.instance.client.auth.currentUser;
+              if (currentUser != null) {
+                await context
+                    .read<PatientProfileCubit>()
+                    .loadPatientProfile(currentUser.id);
+              }
+            }
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 18),
+                _buildTopBar(context),
+                const SizedBox(height: 20),
+                _buildUpcomingCard(context),
+                const SizedBox(height: 20),
+                _buildTodaysAppointments(context),
+                const SizedBox(height: 20),
+                _buildQuickActions(context),
+                const SizedBox(height: 20),
+                _buildRecentRecords(context),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -153,40 +177,59 @@ class PatientHomeScreen extends StatelessWidget {
       builder: (context, state) {
         final appointments = context.read<AppointmentCubit>().appointments;
 
-        // Find nearest future appointment
-        final futureAppointments = appointments.where((appt) {
-          final apptDateTime = DateTime(
-            appt.appointmentDate.year,
-            appt.appointmentDate.month,
-            appt.appointmentDate.day,
-            appt.appointmentTime.hour,
-            appt.appointmentTime.minute,
-          );
-          final isFuture = apptDateTime
-              .isAfter(DateTime.now().subtract(const Duration(minutes: 30)));
-          final isActive = appt.status == AppointmentStatus.pending ||
-              appt.status == AppointmentStatus.confirmed;
-          return isFuture && isActive;
-        }).toList();
+        Appointment? appt;
 
-        // Sort ascending
-        futureAppointments.sort((a, b) {
-          final dtA = DateTime(
+        // 1. Check if there is an active appointment where the video call is started by the doctor
+        for (final a in appointments) {
+          if ((a.status == AppointmentStatus.pending ||
+                  a.status == AppointmentStatus.confirmed) &&
+              a.videoRoomUrl != null &&
+              a.videoRoomUrl!.isNotEmpty) {
+            appt = a;
+            break;
+          }
+        }
+
+        // 2. Fall back to finding the nearest future appointment
+        if (appt == null) {
+          final futureAppointments = appointments.where((a) {
+            final apptDateTime = DateTime(
               a.appointmentDate.year,
               a.appointmentDate.month,
               a.appointmentDate.day,
               a.appointmentTime.hour,
-              a.appointmentTime.minute);
-          final dtB = DateTime(
-              b.appointmentDate.year,
-              b.appointmentDate.month,
-              b.appointmentDate.day,
-              b.appointmentTime.hour,
-              b.appointmentTime.minute);
-          return dtA.compareTo(dtB);
-        });
+              a.appointmentTime.minute,
+            );
+            final isFuture = apptDateTime
+                .isAfter(DateTime.now().subtract(const Duration(minutes: 30)));
+            final isActive = a.status == AppointmentStatus.pending ||
+                a.status == AppointmentStatus.confirmed;
+            return isFuture && isActive;
+          }).toList();
 
-        if (futureAppointments.isEmpty) {
+          // Sort ascending
+          futureAppointments.sort((a, b) {
+            final dtA = DateTime(
+                a.appointmentDate.year,
+                a.appointmentDate.month,
+                a.appointmentDate.day,
+                a.appointmentTime.hour,
+                a.appointmentTime.minute);
+            final dtB = DateTime(
+                b.appointmentDate.year,
+                b.appointmentDate.month,
+                b.appointmentDate.day,
+                b.appointmentTime.hour,
+                b.appointmentTime.minute);
+            return dtA.compareTo(dtB);
+          });
+
+          if (futureAppointments.isNotEmpty) {
+            appt = futureAppointments.first;
+          }
+        }
+
+        if (appt == null) {
           return Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
@@ -250,7 +293,6 @@ class PatientHomeScreen extends StatelessWidget {
           );
         }
 
-        final appt = futureAppointments.first;
         final docName = appt.doctorName ?? 'Clinical Doctor';
 
         final careTypeStr = appt.careType != null
@@ -259,6 +301,9 @@ class PatientHomeScreen extends StatelessWidget {
 
         final formattedDateTime = _formatAppointmentDateTime(
             appt.appointmentDate, appt.appointmentTime);
+
+        final isCallStarted =
+            appt.videoRoomUrl != null && appt.videoRoomUrl!.isNotEmpty;
 
         return Container(
           padding: const EdgeInsets.all(18),
@@ -295,8 +340,18 @@ class PatientHomeScreen extends StatelessWidget {
                             style: AppText.body(13,
                                 color: AppColors.accent,
                                 weight: FontWeight.w700)),
-                        Text('Upcoming Appointment',
-                            style: AppText.body(11, color: Colors.white60)),
+                        Text(
+                          isCallStarted
+                              ? 'Active Call - Join Now'
+                              : 'Upcoming Appointment',
+                          style: AppText.body(11,
+                              color: isCallStarted
+                                  ? AppColors.accent
+                                  : Colors.white60,
+                              weight: isCallStarted
+                                  ? FontWeight.w700
+                                  : FontWeight.normal),
+                        ),
                       ],
                     ),
                   ),
@@ -314,21 +369,29 @@ class PatientHomeScreen extends StatelessWidget {
                   Expanded(
                     child: appt.careType == AppointmentCareType.video
                         ? ElevatedButton.icon(
-                            onPressed: (appt.videoRoomUrl != null && appt.videoRoomUrl!.isNotEmpty)
+                            onPressed: (appt.videoRoomUrl != null &&
+                                    appt.videoRoomUrl!.isNotEmpty)
                                 ? () {
-                                    final patientState = context.read<PatientProfileCubit>().state;
-                                    final patientName = (patientState is PatientProfileLoaded)
-                                        ? (patientState.profile.fullName ?? 'Patient')
-                                        : 'Patient';
-                                    final patientId = (patientState is PatientProfileLoaded)
-                                        ? patientState.profile.id
-                                        : (Supabase.instance.client.auth.currentUser?.id ?? '');
+                                    final patientState = context
+                                        .read<PatientProfileCubit>()
+                                        .state;
+                                    final patientName =
+                                        (patientState is PatientProfileLoaded)
+                                            ? (patientState.profile.fullName ??
+                                                'Patient')
+                                            : 'Patient';
+                                    final patientId =
+                                        (patientState is PatientProfileLoaded)
+                                            ? patientState.profile.id
+                                            : (Supabase.instance.client.auth
+                                                    .currentUser?.id ??
+                                                '');
 
                                     Navigator.pushNamed(
                                       context,
                                       Routes.videoCall,
                                       arguments: {
-                                        'callId': appt.videoRoomUrl!,
+                                        'callId': appt?.videoRoomUrl!,
                                         'userId': patientId,
                                         'userName': patientName,
                                       },
@@ -337,22 +400,26 @@ class PatientHomeScreen extends StatelessWidget {
                                 : () {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Waiting for the doctor to start the video call...'),
+                                        content: Text(
+                                            'Waiting for the doctor to start the video call...'),
                                         backgroundColor: AppColors.orange,
                                       ),
                                     );
                                   },
                             icon: const Icon(Icons.videocam_rounded, size: 16),
                             label: Text(
-                              (appt.videoRoomUrl != null && appt.videoRoomUrl!.isNotEmpty)
+                              (appt.videoRoomUrl != null &&
+                                      appt.videoRoomUrl!.isNotEmpty)
                                   ? 'Join Call'
                                   : 'Wait for Doctor',
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: (appt.videoRoomUrl != null && appt.videoRoomUrl!.isNotEmpty)
+                              backgroundColor: (appt.videoRoomUrl != null &&
+                                      appt.videoRoomUrl!.isNotEmpty)
                                   ? AppColors.accent
                                   : Colors.white.withOpacity(0.2),
-                              foregroundColor: (appt.videoRoomUrl != null && appt.videoRoomUrl!.isNotEmpty)
+                              foregroundColor: (appt.videoRoomUrl != null &&
+                                      appt.videoRoomUrl!.isNotEmpty)
                                   ? Colors.white
                                   : Colors.white70,
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -395,12 +462,12 @@ class PatientHomeScreen extends StatelessWidget {
                           context,
                           Routes.chatScreen,
                           arguments: {
-                            'appointmentId': appt.id,
+                            'appointmentId': appt?.id,
                             'currentUserId':
                                 Supabase.instance.client.auth.currentUser?.id ??
                                     '',
                             'otherUserId':
-                                appt.doctorAuthId ?? appt.staffProfileId,
+                                appt?.doctorAuthId ?? appt?.staffProfileId,
                             'otherUserName': docName,
                             'otherUserRole': 'Doctor',
                             'otherUserAvatar': null,
