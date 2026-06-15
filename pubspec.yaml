@@ -20,7 +20,8 @@ dependencies:
   shared_preferences: ^2.5.5
   get_it: ^8.0.0
   image_picker: ^1.1.2
-  file_picker: ^8.1.2
+  file_picker: ^10.3.8
+  zego_uikit_prebuilt_call: ^4.24.2
 
 
 dev_dependencies:

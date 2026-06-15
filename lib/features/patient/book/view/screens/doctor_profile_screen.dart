@@ -144,7 +144,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     try {
       final res = await Supabase.instance.client
           .from('reviews')
-          .select('*, patient:patient_profiles(*, profiles(full_name))')
+          .select('*, patient:patient_profiles(*, profiles!profile_id(full_name))')
           .eq('staff_profile_id', staffId);
 
       final loadedReviews = <_DoctorReview>[];

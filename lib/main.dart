@@ -48,11 +48,9 @@ void main() async {
         BlocProvider(
             create: (context) => DocumentCubit(DocumentRepositoryImpl())),
         BlocProvider(
-            create: (context) =>
-                AvailabilityCubit(AvailabilityRepository())),
+            create: (context) => AvailabilityCubit(AvailabilityRepository())),
         BlocProvider(
-            create: (context) =>
-                AppointmentCubit(AppointmentRepository())),
+            create: (context) => AppointmentCubit(AppointmentRepository())),
         BlocProvider(
             create: (context) =>
                 DoctorPatientsCubit(DoctorPatientsRepository())),

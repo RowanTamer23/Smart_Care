@@ -78,7 +78,7 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
     try {
       final res = await Supabase.instance.client
           .from('medical_staff_profiles')
-          .select('*, profiles(full_name, avatar_url), specialties(name)');
+          .select('*, profiles!profile_id(full_name, avatar_url), specialties(name)');
 
       final mapped = (res as List).map((item) {
         final profile = item['profiles'] as Map<String, dynamic>?;

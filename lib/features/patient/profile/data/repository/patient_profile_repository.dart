@@ -1,3 +1,4 @@
+import 'package:smart_care/features/patient/profile/data/model/lab_model.dart';
 import 'package:smart_care/features/patient/profile/data/model/patient_profile_model.dart';
 import 'package:smart_care/features/patient/profile/data/model/medical_record_model.dart';
 import 'package:smart_care/features/patient/profile/data/model/medical_reminder_model.dart';
@@ -7,11 +8,12 @@ class PatientProfileRepository {
   final _supabase = Supabase.instance.client;
 
   /// Fetches a patient profile associated with the user's main profile/auth ID.
+  /// Joins the main `profiles` table to get the user's full name and avatar.
   Future<PatientProfile?> getPatientProfile(String profileId) async {
     try {
       final res = await _supabase
           .from('patient_profiles')
-          .select()
+          .select('*, profiles!profile_id(full_name, avatar_url)')
           .eq('profile_id', profileId)
           .maybeSingle();
       if (res == null) return null;
@@ -24,16 +26,22 @@ class PatientProfileRepository {
   }
 
   /// Inserts or updates the patient profile record.
+  /// Re-fetches with profiles join after upsert to get the full_name populated.
   Future<PatientProfile> savePatientProfile(PatientProfile profile) async {
     try {
       final map = profile.toMap();
       if (profile.id.isEmpty || profile.id == 'temp-id' || profile.id.startsWith('temp')) {
         map.remove('id');
       }
+      // Upsert the row
+      await _supabase
+          .from('patient_profiles')
+          .upsert(map, onConflict: 'profile_id');
+      // Re-fetch with the profiles join to get full_name
       final res = await _supabase
           .from('patient_profiles')
-          .upsert(map, onConflict: 'profile_id')
-          .select()
+          .select('*, profiles!profile_id(full_name, avatar_url)')
+          .eq('profile_id', profile.profileId)
           .single();
       return PatientProfile.fromMap(res);
     } on PostgrestException catch (e) {
@@ -95,6 +103,41 @@ class PatientProfileRepository {
       throw 'An unexpected error occurred while updating medical record: $e';
     }
   }
+
+  Future<List<PatientLab>> getLabs(String patientProfileId) async {
+    try {
+      final res = await _supabase
+          .from('patient_labs')
+          .select()
+          .eq('patient_profile_id', patientProfileId)
+          .order('created_at', ascending: false);
+      return (res as List).map((e) => PatientLab.fromMap(e)).toList();
+    } on PostgrestException catch (e) {
+      throw e.message;
+    } catch (e) {
+      throw 'An unexpected error occurred while fetching labs: $e';
+    }
+  }
+
+Future<PatientLab> addLab(PatientLab lab) async {
+    try {
+      final map = lab.toMap();
+      if (lab.id.isEmpty || lab.id == 'temp-id' || lab.id.startsWith('temp')) {
+        map.remove('id');
+      }
+      final res = await _supabase
+          .from('patient_labs')
+          .insert(map)
+          .select()
+          .single();
+      return PatientLab.fromMap(res);
+    } on PostgrestException catch (e) {
+      throw e.message;
+    } catch (e) {
+      throw 'An unexpected error occurred while adding lab: $e';
+    }
+  }
+  
 
   /// Fetches medical reminders for a patient.
   Future<List<MedicalReminder>> getMedicalReminders(String patientProfileId) async {

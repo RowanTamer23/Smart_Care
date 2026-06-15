@@ -12,6 +12,10 @@ import 'package:smart_care/features/patient/profile/view/screens/profile_screen.
 import 'package:smart_care/features/patient/profile/cubit/patient_profile_cubit.dart';
 import 'package:smart_care/features/patient/profile/cubit/patient_profile_state.dart';
 import 'package:smart_care/features/doctor/schedule/cubit/appointment_cubit.dart';
+import 'package:smart_care/features/doctor/schedule/cubit/appointment_state.dart';
+import 'package:smart_care/features/doctor/profile/cubit/profile_cubit.dart';
+import 'package:smart_care/features/doctor/profile/cubit/profile_state.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MainLayout extends StatefulWidget {
   final String role;
@@ -26,6 +30,44 @@ class _MainLayoutState extends State<MainLayout> {
   int _currentIndex = 0;
 
   List<Widget> _screens = [];
+  RealtimeChannel? _appointmentChannel;
+
+  @override
+  void dispose() {
+    _unsubscribeFromAppointments();
+    super.dispose();
+  }
+
+  void _unsubscribeFromAppointments() {
+    if (_appointmentChannel != null) {
+      Supabase.instance.client.removeChannel(_appointmentChannel!);
+      _appointmentChannel = null;
+    }
+  }
+
+  void _subscribeToAppointments(String filterColumn, String filterValue, VoidCallback onUpdate) {
+    if (_appointmentChannel != null) return;
+
+    _appointmentChannel = Supabase.instance.client
+        .channel('public:appointments:$filterValue')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'appointments',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: filterColumn,
+            value: filterValue,
+          ),
+          callback: (payload) {
+            if (mounted) {
+              onUpdate();
+            }
+          },
+        )
+        .subscribe();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -57,12 +99,45 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<PatientProfileCubit, PatientProfileState>(
-      listener: (context, state) {
-        if (state is PatientProfileLoaded) {
-          context.read<AppointmentCubit>().getPatientAppointments(state.profile.id);
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<PatientProfileCubit, PatientProfileState>(
+          listener: (context, state) {
+            if (state is PatientProfileLoaded) {
+              final patientId = state.profile.id;
+              final apptState = context.read<AppointmentCubit>().state;
+              if (apptState is AppointmentInitial) {
+                context.read<AppointmentCubit>().getPatientAppointments(patientId);
+              }
+              _subscribeToAppointments(
+                'patient_profile_id',
+                patientId,
+                () {
+                  context.read<AppointmentCubit>().getPatientAppointments(patientId);
+                },
+              );
+            }
+          },
+        ),
+        BlocListener<MedicalStaffCubit, MedicalStaffState>(
+          listener: (context, state) {
+            if (state is MedicalStaffSuccess) {
+              final staffId = state.medicalStaffProfile.id;
+              final apptState = context.read<AppointmentCubit>().state;
+              if (apptState is AppointmentInitial) {
+                context.read<AppointmentCubit>().getAppointments(staffId);
+              }
+              _subscribeToAppointments(
+                'staff_profile_id',
+                staffId,
+                () {
+                  context.read<AppointmentCubit>().getAppointments(staffId);
+                },
+              );
+            }
+          },
+        ),
+      ],
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: IndexedStack(

@@ -32,13 +32,13 @@ class ScheduleAppointmentsList extends StatelessWidget {
     final isPatient = role == 'patient';
 
     // Use authentic profiles.id (Auth user ID) for the chat endpoints
-    final currentProfileId = Supabase.instance.client.auth.currentUser?.id ?? '';
+    final currentProfileId =
+        Supabase.instance.client.auth.currentUser?.id ?? '';
     final otherProfileId = isPatient
         ? (a.doctorAuthId ?? a.staffProfileId)
         : (a.patientAuthId ?? a.patientProfileId);
-    final otherName = isPatient
-        ? (a.doctorName ?? 'Doctor')
-        : (a.patientName ?? 'Patient');
+    final otherName =
+        isPatient ? (a.doctorName ?? 'Doctor') : (a.patientName ?? 'Patient');
     final otherRole = isPatient ? 'Doctor' : 'Patient';
 
     Navigator.pushNamed(
@@ -58,8 +58,18 @@ class ScheduleAppointmentsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final dateStr = '${months[selectedDate.month - 1]} ${selectedDate.day}';
 
@@ -87,7 +97,8 @@ class ScheduleAppointmentsList extends StatelessWidget {
                         style: AppTextStyles.bodySmall
                             .copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(width: 4),
-                    const Icon(Icons.tune, size: 14, color: AppColors.textMuted),
+                    const Icon(Icons.tune,
+                        size: 14, color: AppColors.textMuted),
                   ],
                 ),
               ),
@@ -96,7 +107,8 @@ class ScheduleAppointmentsList extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ── Content ───────────────────────────────────────────────────────
-          if (state is AppointmentLoading && filtered.isEmpty)
+          if ((state is AppointmentLoading || state is AppointmentInitial) &&
+              filtered.isEmpty)
             const Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 40.0),
@@ -109,16 +121,14 @@ class ScheduleAppointmentsList extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 20.0),
                 child: Text(
                   'Failed to load appointments: ${(state as AppointmentFailure).error}',
-                  style:
-                      AppTextStyles.body.copyWith(color: AppColors.critical),
+                  style: AppTextStyles.body.copyWith(color: AppColors.critical),
                 ),
               ),
             )
           else if (filtered.isEmpty)
             Container(
               width: double.infinity,
-              padding:
-                  const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -183,8 +193,7 @@ class ScheduleAppointmentsList extends StatelessWidget {
                   child: ScheduleItem(
                     time: formattedTime,
                     name: name,
-                    typeProcedure:
-                        '$typeStr • ${a.notesText}',
+                    typeProcedure: '$typeStr • ${a.notesText}',
                     isCompleted: isCompleted,
                     isConfirmed: isConfirmed,
                     isPending: isPending,

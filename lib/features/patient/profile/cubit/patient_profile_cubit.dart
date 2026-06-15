@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_care/features/patient/profile/cubit/patient_profile_state.dart';
+import 'package:smart_care/features/patient/profile/data/model/lab_model.dart';
 import 'package:smart_care/features/patient/profile/data/model/patient_profile_model.dart';
 import 'package:smart_care/features/patient/profile/data/model/medical_record_model.dart';
 import 'package:smart_care/features/patient/profile/data/model/medical_reminder_model.dart';
@@ -31,7 +32,8 @@ class PatientProfileCubit extends Cubit<PatientProfileState> {
 
       final records = await repository.getMedicalRecords(profile.id);
       final reminders = await repository.getMedicalReminders(profile.id);
-      emit(PatientProfileLoaded(profile, records, reminders));
+      final labs = await repository.getLabs(profile.id);
+      emit(PatientProfileLoaded(profile, records, reminders, labs));
     } catch (e) {
       emit(PatientProfileError(e.toString()));
     }
@@ -46,7 +48,8 @@ class PatientProfileCubit extends Cubit<PatientProfileState> {
         final updatedProfile = await repository.savePatientProfile(profile);
         final records = await repository.getMedicalRecords(updatedProfile.id);
         final reminders = await repository.getMedicalReminders(updatedProfile.id);
-        emit(PatientProfileLoaded(updatedProfile, records, reminders));
+        final labs = await repository.getLabs(updatedProfile.id);
+        emit(PatientProfileLoaded(updatedProfile, records, reminders, labs));
       } catch (e) {
         emit(PatientProfileError(e.toString()));
       }
@@ -61,8 +64,9 @@ class PatientProfileCubit extends Cubit<PatientProfileState> {
       try {
         await repository.addMedicalRecord(record);
         final records = await repository.getMedicalRecords(currentState.profile.id);
+        final labs = await repository.getLabs(currentState.profile.id);
         final reminders = await repository.getMedicalReminders(currentState.profile.id);
-        emit(PatientProfileLoaded(currentState.profile, records, reminders));
+        emit(PatientProfileLoaded(currentState.profile, records, reminders, labs));
       } catch (e) {
         emit(PatientProfileError(e.toString()));
       }
@@ -77,8 +81,26 @@ class PatientProfileCubit extends Cubit<PatientProfileState> {
       try {
         await repository.updateMedicalRecord(record);
         final records = await repository.getMedicalRecords(currentState.profile.id);
+        final labs = await repository.getLabs(currentState.profile.id);
         final reminders = await repository.getMedicalReminders(currentState.profile.id);
-        emit(PatientProfileLoaded(currentState.profile, records, reminders));
+        emit(PatientProfileLoaded(currentState.profile, records, reminders, labs));
+      } catch (e) {
+        emit(PatientProfileError(e.toString()));
+      }
+    }
+  }
+
+  // add Lab 
+  Future<void> addLab(PatientLab lab) async {
+    final currentState = state;
+    if (currentState is PatientProfileLoaded) {
+      emit(PatientProfileLoading());
+      try {
+        await repository.addLab(lab);
+        final records = await repository.getMedicalRecords(currentState.profile.id);
+        final labs = await repository.getLabs(currentState.profile.id);
+        final reminders = await repository.getMedicalReminders(currentState.profile.id);
+        emit(PatientProfileLoaded(currentState.profile, records, reminders, labs));
       } catch (e) {
         emit(PatientProfileError(e.toString()));
       }
@@ -94,7 +116,8 @@ class PatientProfileCubit extends Cubit<PatientProfileState> {
         await repository.addMedicalReminder(reminder);
         final records = await repository.getMedicalRecords(currentState.profile.id);
         final reminders = await repository.getMedicalReminders(currentState.profile.id);
-        emit(PatientProfileLoaded(currentState.profile, records, reminders));
+        final labs = await repository.getLabs(currentState.profile.id);
+        emit(PatientProfileLoaded(currentState.profile, records, reminders, labs));
       } catch (e) {
         emit(PatientProfileError(e.toString()));
       }
@@ -110,7 +133,8 @@ class PatientProfileCubit extends Cubit<PatientProfileState> {
         await repository.updateMedicalReminder(reminder);
         final records = await repository.getMedicalRecords(currentState.profile.id);
         final reminders = await repository.getMedicalReminders(currentState.profile.id);
-        emit(PatientProfileLoaded(currentState.profile, records, reminders));
+        final labs = await repository.getLabs(currentState.profile.id);
+        emit(PatientProfileLoaded(currentState.profile, records, reminders, labs));
       } catch (e) {
         emit(PatientProfileError(e.toString()));
       }

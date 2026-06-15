@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smart_care/core/routes/routes.dart';
 import 'package:smart_care/features/patient/shared.dart';
 import 'package:smart_care/features/patient/theme3.dart';
+import 'package:smart_care/features/patient/profile/data/model/medical_record_model.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_care/features/patient/profile/cubit/patient_profile_cubit.dart';
@@ -19,7 +20,7 @@ class PatientHomeScreen extends StatelessWidget {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final apptDate = DateTime(date.year, date.month, date.day);
-    
+
     String datePart;
     if (apptDate == today) {
       datePart = 'Today';
@@ -27,14 +28,28 @@ class PatientHomeScreen extends StatelessWidget {
       datePart = 'Tomorrow';
     } else {
       final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      datePart = '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec'
+      ];
+      datePart =
+          '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
     }
-    
+
     final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
     final minute = time.minute.toString().padLeft(2, '0');
     final period = time.period == DayPeriod.am ? 'AM' : 'PM';
-    
+
     return '$datePart • $hour:$minute $period';
   }
 
@@ -57,7 +72,7 @@ class PatientHomeScreen extends StatelessWidget {
               const SizedBox(height: 20),
               _buildQuickActions(context),
               const SizedBox(height: 20),
-              _buildRecentRecords(),
+              _buildRecentRecords(context),
               const SizedBox(height: 20),
             ],
           ),
@@ -70,7 +85,9 @@ class PatientHomeScreen extends StatelessWidget {
     return BlocBuilder<PatientProfileCubit, PatientProfileState>(
       builder: (context, state) {
         String patientName = 'Rowan Tamer';
-        if (state is PatientProfileLoaded && state.profile.fullName != null && state.profile.fullName!.isNotEmpty) {
+        if (state is PatientProfileLoaded &&
+            state.profile.fullName != null &&
+            state.profile.fullName!.isNotEmpty) {
           patientName = state.profile.fullName!;
         }
         return Row(
@@ -82,8 +99,8 @@ class PatientHomeScreen extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: AppColors.primaryGradient,
               ),
-              child:
-                  const Icon(Icons.person_rounded, color: Colors.white, size: 22),
+              child: const Icon(Icons.person_rounded,
+                  color: Colors.white, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -103,7 +120,8 @@ class PatientHomeScreen extends StatelessWidget {
                 color: Colors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8)
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.06), blurRadius: 8)
                 ],
               ),
               child: Stack(
@@ -144,15 +162,27 @@ class PatientHomeScreen extends StatelessWidget {
             appt.appointmentTime.hour,
             appt.appointmentTime.minute,
           );
-          final isFuture = apptDateTime.isAfter(DateTime.now().subtract(const Duration(minutes: 30)));
-          final isActive = appt.status == AppointmentStatus.pending || appt.status == AppointmentStatus.confirmed;
+          final isFuture = apptDateTime
+              .isAfter(DateTime.now().subtract(const Duration(minutes: 30)));
+          final isActive = appt.status == AppointmentStatus.pending ||
+              appt.status == AppointmentStatus.confirmed;
           return isFuture && isActive;
         }).toList();
 
         // Sort ascending
         futureAppointments.sort((a, b) {
-          final dtA = DateTime(a.appointmentDate.year, a.appointmentDate.month, a.appointmentDate.day, a.appointmentTime.hour, a.appointmentTime.minute);
-          final dtB = DateTime(b.appointmentDate.year, b.appointmentDate.month, b.appointmentDate.day, b.appointmentTime.hour, b.appointmentTime.minute);
+          final dtA = DateTime(
+              a.appointmentDate.year,
+              a.appointmentDate.month,
+              a.appointmentDate.day,
+              a.appointmentTime.hour,
+              a.appointmentTime.minute);
+          final dtB = DateTime(
+              b.appointmentDate.year,
+              b.appointmentDate.month,
+              b.appointmentDate.day,
+              b.appointmentTime.hour,
+              b.appointmentTime.minute);
           return dtA.compareTo(dtB);
         });
 
@@ -222,12 +252,13 @@ class PatientHomeScreen extends StatelessWidget {
 
         final appt = futureAppointments.first;
         final docName = appt.doctorName ?? 'Clinical Doctor';
-        
+
         final careTypeStr = appt.careType != null
             ? '${appt.careType!.value[0].toUpperCase()}${appt.careType!.value.substring(1)} Consultation'
             : 'In-person Consultation';
 
-        final formattedDateTime = _formatAppointmentDateTime(appt.appointmentDate, appt.appointmentTime);
+        final formattedDateTime = _formatAppointmentDateTime(
+            appt.appointmentDate, appt.appointmentTime);
 
         return Container(
           padding: const EdgeInsets.all(18),
@@ -262,7 +293,8 @@ class PatientHomeScreen extends StatelessWidget {
                       children: [
                         Text(formattedDateTime,
                             style: AppText.body(13,
-                                color: AppColors.accent, weight: FontWeight.w700)),
+                                color: AppColors.accent,
+                                weight: FontWeight.w700)),
                         Text('Upcoming Appointment',
                             style: AppText.body(11, color: Colors.white60)),
                       ],
@@ -271,11 +303,9 @@ class PatientHomeScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 14),
-              Text(docName,
-                  style: AppText.display(18, color: Colors.white)),
+              Text(docName, style: AppText.display(18, color: Colors.white)),
               const SizedBox(height: 4),
-              Text(careTypeStr,
-                  style: AppText.body(13, color: Colors.white60)),
+              Text(careTypeStr, style: AppText.body(13, color: Colors.white60)),
               const SizedBox(height: 12),
               // ── Action buttons row ─────────────────────────────────────
               Row(
@@ -284,20 +314,48 @@ class PatientHomeScreen extends StatelessWidget {
                   Expanded(
                     child: appt.careType == AppointmentCareType.video
                         ? ElevatedButton.icon(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(
-                                        'Joining: ${appt.videoRoomUrl ?? "https://smartcare.meet/room-id"}')),
-                              );
-                            },
+                            onPressed: (appt.videoRoomUrl != null && appt.videoRoomUrl!.isNotEmpty)
+                                ? () {
+                                    final patientState = context.read<PatientProfileCubit>().state;
+                                    final patientName = (patientState is PatientProfileLoaded)
+                                        ? (patientState.profile.fullName ?? 'Patient')
+                                        : 'Patient';
+                                    final patientId = (patientState is PatientProfileLoaded)
+                                        ? patientState.profile.id
+                                        : (Supabase.instance.client.auth.currentUser?.id ?? '');
+
+                                    Navigator.pushNamed(
+                                      context,
+                                      Routes.videoCall,
+                                      arguments: {
+                                        'callId': appt.videoRoomUrl!,
+                                        'userId': patientId,
+                                        'userName': patientName,
+                                      },
+                                    );
+                                  }
+                                : () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Waiting for the doctor to start the video call...'),
+                                        backgroundColor: AppColors.orange,
+                                      ),
+                                    );
+                                  },
                             icon: const Icon(Icons.videocam_rounded, size: 16),
-                            label: const Text('Join Call'),
+                            label: Text(
+                              (appt.videoRoomUrl != null && appt.videoRoomUrl!.isNotEmpty)
+                                  ? 'Join Call'
+                                  : 'Wait for Doctor',
+                            ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.accent,
-                              foregroundColor: Colors.white,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 12),
+                              backgroundColor: (appt.videoRoomUrl != null && appt.videoRoomUrl!.isNotEmpty)
+                                  ? AppColors.accent
+                                  : Colors.white.withOpacity(0.2),
+                              foregroundColor: (appt.videoRoomUrl != null && appt.videoRoomUrl!.isNotEmpty)
+                                  ? Colors.white
+                                  : Colors.white70,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12)),
                               textStyle:
@@ -313,14 +371,13 @@ class PatientHomeScreen extends StatelessWidget {
                                         'Directions: 123 Health Ave, Suite 400')),
                               );
                             },
-                            icon: const Icon(Icons.location_on_rounded,
-                                size: 16),
+                            icon:
+                                const Icon(Icons.location_on_rounded, size: 16),
                             label: const Text('Directions'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.accent,
                               foregroundColor: Colors.white,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12)),
                               textStyle:
@@ -339,29 +396,28 @@ class PatientHomeScreen extends StatelessWidget {
                           Routes.chatScreen,
                           arguments: {
                             'appointmentId': appt.id,
-                            'currentUserId': Supabase.instance.client.auth.currentUser?.id ?? '',
-                            'otherUserId': appt.doctorAuthId ?? appt.staffProfileId,
+                            'currentUserId':
+                                Supabase.instance.client.auth.currentUser?.id ??
+                                    '',
+                            'otherUserId':
+                                appt.doctorAuthId ?? appt.staffProfileId,
                             'otherUserName': docName,
                             'otherUserRole': 'Doctor',
                             'otherUserAvatar': null,
                           },
                         );
                       },
-                      icon: const Icon(
-                          Icons.chat_bubble_outline_rounded,
+                      icon: const Icon(Icons.chat_bubble_outline_rounded,
                           size: 16),
                       label: const Text('Message'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
                         side: BorderSide(
-                            color:
-                                Colors.white.withValues(alpha: 0.4)),
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 12),
+                            color: Colors.white.withValues(alpha: 0.4)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
-                        textStyle:
-                            AppText.body(13, weight: FontWeight.w700),
+                        textStyle: AppText.body(13, weight: FontWeight.w700),
                       ),
                     ),
                   ),
@@ -398,8 +454,18 @@ class PatientHomeScreen extends StatelessWidget {
 
         // Sort ascending by time
         todaysAppts.sort((a, b) {
-          final dtA = DateTime(a.appointmentDate.year, a.appointmentDate.month, a.appointmentDate.day, a.appointmentTime.hour, a.appointmentTime.minute);
-          final dtB = DateTime(b.appointmentDate.year, b.appointmentDate.month, b.appointmentDate.day, b.appointmentTime.hour, b.appointmentTime.minute);
+          final dtA = DateTime(
+              a.appointmentDate.year,
+              a.appointmentDate.month,
+              a.appointmentDate.day,
+              a.appointmentTime.hour,
+              a.appointmentTime.minute);
+          final dtB = DateTime(
+              b.appointmentDate.year,
+              b.appointmentDate.month,
+              b.appointmentDate.day,
+              b.appointmentTime.hour,
+              b.appointmentTime.minute);
           return dtA.compareTo(dtB);
         });
 
@@ -418,14 +484,16 @@ class PatientHomeScreen extends StatelessWidget {
                 children: [
                   Text('Today\'s Appointments', style: AppText.display(16)),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       '${todaysAppts.length}',
-                      style: AppText.body(12, color: AppColors.primary, weight: FontWeight.w700),
+                      style: AppText.body(12,
+                          color: AppColors.primary, weight: FontWeight.w700),
                     ),
                   ),
                 ],
@@ -437,11 +505,14 @@ class PatientHomeScreen extends StatelessWidget {
                   child: Center(
                     child: Column(
                       children: [
-                        const Icon(Icons.event_busy_rounded, size: 36, color: AppColors.textMuted),
+                        const Icon(Icons.event_busy_rounded,
+                            size: 36, color: AppColors.textMuted),
                         const SizedBox(height: 10),
                         Text(
                           'No appointments scheduled for today.',
-                          style: AppText.body(13, color: AppColors.textSecondary, weight: FontWeight.w500),
+                          style: AppText.body(13,
+                              color: AppColors.textSecondary,
+                              weight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -452,11 +523,13 @@ class PatientHomeScreen extends StatelessWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: todaysAppts.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final appt = todaysAppts[index];
                     final time = appt.appointmentTime;
-                    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+                    final hour =
+                        time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
                     final minute = time.minute.toString().padLeft(2, '0');
                     final period = time.period == DayPeriod.am ? 'AM' : 'PM';
                     final docName = appt.doctorName ?? 'Clinical Doctor';
@@ -474,7 +547,8 @@ class PatientHomeScreen extends StatelessWidget {
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
                               color: AppColors.primary,
                               borderRadius: BorderRadius.circular(8),
@@ -484,11 +558,14 @@ class PatientHomeScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   '$hour:$minute',
-                                  style: AppText.body(13, color: Colors.white, weight: FontWeight.w800),
+                                  style: AppText.body(13,
+                                      color: Colors.white,
+                                      weight: FontWeight.w800),
                                 ),
                                 Text(
                                   period,
-                                  style: AppText.label(color: Colors.white70, size: 10),
+                                  style: AppText.label(
+                                      color: Colors.white70, size: 10),
                                 ),
                               ],
                             ),
@@ -500,12 +577,14 @@ class PatientHomeScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   docName,
-                                  style: AppText.body(14, weight: FontWeight.w700),
+                                  style:
+                                      AppText.body(14, weight: FontWeight.w700),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   '$careTypeStr Consultation',
-                                  style: AppText.label(color: AppColors.textSecondary, size: 11),
+                                  style: AppText.label(
+                                      color: AppColors.textSecondary, size: 11),
                                 ),
                               ],
                             ),
@@ -513,7 +592,8 @@ class PatientHomeScreen extends StatelessWidget {
                           const SizedBox(width: 8),
                           // Status Badge
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: appt.status == AppointmentStatus.confirmed
                                   ? AppColors.green.withOpacity(0.08)
@@ -523,9 +603,10 @@ class PatientHomeScreen extends StatelessWidget {
                             child: Text(
                               appt.status.name.toUpperCase(),
                               style: AppText.label(
-                                color: appt.status == AppointmentStatus.confirmed
-                                    ? AppColors.green
-                                    : AppColors.orange,
+                                color:
+                                    appt.status == AppointmentStatus.confirmed
+                                        ? AppColors.green
+                                        : AppColors.orange,
                                 size: 9,
                                 weight: FontWeight.w700,
                               ),
@@ -553,12 +634,12 @@ class PatientHomeScreen extends StatelessWidget {
           children: [
             Expanded(
                 child: _QuickAction(
-                    icon: Icons.calendar_today_rounded,
-                    label: 'Book Appointment',
-                    color: AppColors.primary,
-                    bg: AppColors.primary.withOpacity(0.08),
-                    onTap: onBookPressed,
-                )),
+              icon: Icons.calendar_today_rounded,
+              label: 'Book Appointment',
+              color: AppColors.primary,
+              bg: AppColors.primary.withOpacity(0.08),
+              onTap: onBookPressed,
+            )),
             const SizedBox(width: 10),
             Expanded(
                 child: _QuickAction(
@@ -579,35 +660,111 @@ class PatientHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentRecords() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(title: 'Recent Records', action: 'View All'),
-        const SizedBox(height: 12),
-        _RecordTile(
-          icon: Icons.description_rounded,
-          iconColor: AppColors.blue,
-          iconBg: AppColors.blueLight,
-          title: 'New Blood LPL Recommendation',
-          subtitle: 'Created 3 days ago on Oct 24, 2023',
-        ),
-        const SizedBox(height: 8),
-        _RecordTile(
-          icon: Icons.picture_as_pdf_rounded,
-          iconColor: AppColors.orange,
-          iconBg: AppColors.orangeLight,
-          title: 'Vaccination Record Update 3ad Pred',
-          subtitle: 'Created 6 days on Oct 2, 2023',
-        ),
-      ],
+  Widget _buildRecentRecords(BuildContext context) {
+    return BlocBuilder<PatientProfileCubit, PatientProfileState>(
+      builder: (context, state) {
+        final records = state is PatientProfileLoaded
+            ? state.medicalRecords.take(3).toList()
+            : <MedicalRecord>[];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SectionHeader(title: 'Recent Records', action: 'View All'),
+            const SizedBox(height: 12),
+            if (records.isEmpty)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.folder_open_rounded,
+                        color: AppColors.textMuted, size: 28),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'No medical records yet.',
+                        style: TextStyle(
+                            color: AppColors.textSecondary, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...records.map((record) {
+                final IconData icon;
+                final Color iconColor;
+                final Color iconBg;
+                switch (record.recordType) {
+                  case 'lab':
+                    icon = Icons.science_rounded;
+                    iconColor = AppColors.teal;
+                    iconBg = AppColors.tealLight;
+                    break;
+                  case 'surgery':
+                    icon = Icons.local_hospital_rounded;
+                    iconColor = AppColors.red;
+                    iconBg = AppColors.redLight;
+                    break;
+                  case 'prescription':
+                    icon = Icons.medication_rounded;
+                    iconColor = AppColors.orange;
+                    iconBg = AppColors.orangeLight;
+                    break;
+                  default: // visit
+                    icon = Icons.description_rounded;
+                    iconColor = AppColors.blue;
+                    iconBg = AppColors.blueLight;
+                }
+
+                final months = [
+                  'Jan',
+                  'Feb',
+                  'Mar',
+                  'Apr',
+                  'May',
+                  'Jun',
+                  'Jul',
+                  'Aug',
+                  'Sep',
+                  'Oct',
+                  'Nov',
+                  'Dec'
+                ];
+                final d = record.recordDate;
+                final dateStr = '${months[d.month - 1]} ${d.day}, ${d.year}';
+
+                final title =
+                    (record.diagnosis != null && record.diagnosis!.isNotEmpty)
+                        ? record.diagnosis!
+                        : record.recordType[0].toUpperCase() +
+                            record.recordType.substring(1);
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _RecordTile(
+                    icon: icon,
+                    iconColor: iconColor,
+                    iconBg: iconBg,
+                    title: title,
+                    subtitle: 'Created on $dateStr',
+                  ),
+                );
+              }),
+          ],
+        );
+      },
     );
   }
 }
 
 // ── Supporting Widgets ──────────────────────────────────────────────────────
-
-
 
 class _QuickAction extends StatelessWidget {
   final IconData icon;
@@ -705,5 +862,3 @@ class _RecordTile extends StatelessWidget {
     );
   }
 }
-
-

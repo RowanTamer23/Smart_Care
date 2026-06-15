@@ -9,8 +9,6 @@ import 'package:smart_care/features/doctor/schedule/view/widgets/calendar_header
 import 'package:smart_care/features/doctor/schedule/view/widgets/week_strip.dart';
 import 'package:smart_care/features/doctor/schedule/view/widgets/schedule_load_card.dart';
 import 'package:smart_care/features/doctor/schedule/view/widgets/schedule_appointments_list.dart';
-import 'package:smart_care/features/patient/profile/cubit/patient_profile_cubit.dart';
-import 'package:smart_care/features/patient/profile/cubit/patient_profile_state.dart';
 
 class ScheduleScreen extends StatefulWidget {
   final String? role;
@@ -45,30 +43,25 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final medicalCubit = context.read<MedicalStaffCubit>();
         final profile = medicalCubit.medicalStaffProfile;
-        if (profile == null) {
-          medicalCubit.getMedicalData(widget.profileId!);
-        } else {
+        // If the profile is already loaded (by HomeScreen), fetch appointments directly.
+        // If not yet loaded, the BlocListener<MedicalStaffCubit> below will catch
+        // the MedicalStaffSuccess event once HomeScreen triggers getMedicalData.
+        if (profile != null) {
           context.read<AppointmentCubit>().getAppointments(profile.id);
         }
+        // Do NOT call getMedicalData() here — HomeScreen owns that call to avoid races.
       });
     }
-
-    if (widget.role == 'patient') {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final patientCubit = context.read<PatientProfileCubit>();
-        final patientState = patientCubit.state;
-        if (patientState is PatientProfileLoaded) {
-          context.read<AppointmentCubit>().getPatientAppointments(patientState.profile.id);
-        }
-      });
-    }
+    // Patient appointments are loaded by MainLayout's BlocListener<PatientProfileCubit>.
+    // No duplicate fetch needed here.
   }
 
   void _onNavigation(int daysDiff) {
     setState(() {
       _selectedDate = _selectedDate.add(Duration(days: daysDiff));
       // Re-calculate the week based on new selectedDate
-      final monday = _selectedDate.subtract(Duration(days: _selectedDate.weekday - 1));
+      final monday =
+          _selectedDate.subtract(Duration(days: _selectedDate.weekday - 1));
       final weekdayNames = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
       _days = List.generate(7, (index) {
         final date = monday.add(Duration(days: index));
@@ -97,25 +90,23 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         BlocListener<MedicalStaffCubit, MedicalStaffState>(
           listener: (context, state) {
             if (widget.role == 'doctor' && state is MedicalStaffSuccess) {
-              context.read<AppointmentCubit>().getAppointments(state.medicalStaffProfile.id);
+              context
+                  .read<AppointmentCubit>()
+                  .getAppointments(state.medicalStaffProfile.id);
             }
           },
         ),
-        BlocListener<PatientProfileCubit, PatientProfileState>(
-          listener: (context, state) {
-            if (widget.role == 'patient' && state is PatientProfileLoaded) {
-              context.read<AppointmentCubit>().getPatientAppointments(state.profile.id);
-            }
-          },
-        ),
+        // NOTE: Patient appointment loading is owned by MainLayout's BlocListener.
+        // It is NOT duplicated here to avoid re-fetching on every profile update.
       ],
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
           child: BlocBuilder<AppointmentCubit, AppointmentState>(
             builder: (context, state) {
-              final appointments = context.read<AppointmentCubit>().appointments;
-              
+              final appointments =
+                  context.read<AppointmentCubit>().appointments;
+
               // Filter appointments for selected day
               final filtered = appointments.where((a) {
                 return a.appointmentDate.year == _selectedDate.year &&
@@ -165,7 +156,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       Center(
                         child: Text(
                           'Schedule features are only available to medical staff.',
-                          style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+                          style: AppTextStyles.body
+                              .copyWith(color: AppColors.textSecondary),
                         ),
                       )
                     ],

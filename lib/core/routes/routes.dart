@@ -20,4 +20,6 @@ class Routes {
   static const String patientDetailScreen = '/patientDetailScreen';
   static const String appointmentApproval = '/appointmentApproval';
   static const String chatScreen = '/chatScreen';
+  static const String visitScreen = '/visitScreen';
+  static const String videoCall = '/video-call';
 }

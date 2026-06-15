@@ -30,11 +30,15 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // Load patient profile
-    final userId =
-        widget.profileId ?? Supabase.instance.client.auth.currentUser?.id;
-    if (userId != null) {
-      context.read<PatientProfileCubit>().loadPatientProfile(userId);
+    // Only load if not already loaded — MainLayout triggers loadPatientProfile
+    // via BlocListener when the patient logs in, so avoid a duplicate fetch.
+    final currentState = context.read<PatientProfileCubit>().state;
+    if (currentState is! PatientProfileLoaded) {
+      final userId =
+          widget.profileId ?? Supabase.instance.client.auth.currentUser?.id;
+      if (userId != null) {
+        context.read<PatientProfileCubit>().loadPatientProfile(userId);
+      }
     }
   }
 

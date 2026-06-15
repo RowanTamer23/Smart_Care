@@ -9,6 +9,7 @@ class AppointmentItem extends StatelessWidget {
   final bool isCompleted;
   final bool isPending;
   final bool isCancelled;
+  final VoidCallback? onStartVisit;
 
   const AppointmentItem({
     super.key,
@@ -19,6 +20,7 @@ class AppointmentItem extends StatelessWidget {
     required this.isCompleted,
     required this.isPending,
     required this.isCancelled,
+    this.onStartVisit,
   });
 
   @override
@@ -53,27 +55,30 @@ class AppointmentItem extends StatelessWidget {
             ),
           ),
           if (showStart)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.play_circle_outline,
-                      color: Colors.white, size: 14),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Start\nVisit',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      height: 1.2,
+            GestureDetector(
+              onTap: onStartVisit,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.play_circle_outline,
+                        color: Colors.white, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Start\nVisit',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           if (isCompleted)

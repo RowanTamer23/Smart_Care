@@ -61,4 +61,36 @@ class AppointmentCubit extends Cubit<AppointmentState> {
       emit(AppointmentFailure(e.toString()));
     }
   }
+
+  /// Starts a video call by setting the video room URL to the appointment ID.
+  Future<void> startVideoCall({
+    required String appointmentId,
+    required String staffProfileId,
+  }) async {
+    emit(AppointmentLoading());
+    try {
+      await _repository.updateVideoRoomUrl(appointmentId, appointmentId);
+      // Re-fetch doctor appointments to update local state
+      appointments = await _repository.getAppointments(staffProfileId);
+      emit(AppointmentSuccess(List.from(appointments)));
+    } catch (e) {
+      emit(AppointmentFailure(e.toString()));
+    }
+  }
+
+  /// Ends a video call by setting the video room URL to null.
+  Future<void> endVideoCall({
+    required String appointmentId,
+    required String staffProfileId,
+  }) async {
+    emit(AppointmentLoading());
+    try {
+      await _repository.updateVideoRoomUrl(appointmentId, null);
+      // Re-fetch doctor appointments to update local state
+      appointments = await _repository.getAppointments(staffProfileId);
+      emit(AppointmentSuccess(List.from(appointments)));
+    } catch (e) {
+      emit(AppointmentFailure(e.toString()));
+    }
+  }
 }

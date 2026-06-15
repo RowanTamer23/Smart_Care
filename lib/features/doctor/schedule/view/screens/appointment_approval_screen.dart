@@ -120,6 +120,40 @@ class _AppointmentApprovalScreenState extends State<AppointmentApprovalScreen> {
     });
   }
 
+  void _updateHistoryAppointmentStatus(Appointment appointment, AppointmentStatus newStatus) {
+    if (_updating) return;
+
+    setState(() => _updating = true);
+
+    context.read<AppointmentCubit>().updateAppointmentStatus(
+      appointmentId: appointment.id,
+      status: newStatus,
+      staffProfileId: widget.appointment.staffProfileId,
+    ).then((_) {
+      if (mounted) {
+        final verb = newStatus == AppointmentStatus.confirmed ? 'accepted' : 'refused';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Appointment $verb successfully!'),
+            backgroundColor: newStatus == AppointmentStatus.confirmed ? AppColors.stable : AppColors.critical,
+          ),
+        );
+        // Refresh the patient data to update the appointment history
+        _fetchPatientData();
+      }
+    }).catchError((err) {
+      if (mounted) {
+        setState(() => _updating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update status: $err'),
+            backgroundColor: AppColors.critical,
+          ),
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final displayName = _patientProfile?.fullName ?? widget.appointment.patientName ?? 'Patient Details';
@@ -362,13 +396,16 @@ class _AppointmentApprovalScreenState extends State<AppointmentApprovalScreen> {
     final period = a.appointmentTime.period == DayPeriod.am ? 'AM' : 'PM';
     final timeStr = '$hour:$minute $period';
 
+    final isPending = a.status == AppointmentStatus.pending;
+    final isCurrentAppointment = a.id == widget.appointment.id;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: isCurrentAppointment ? AppColors.primary : AppColors.border),
       ),
       child: Row(
         children: [
@@ -391,17 +428,34 @@ class _AppointmentApprovalScreenState extends State<AppointmentApprovalScreen> {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
+          if (isPending && !isCurrentAppointment) ...[
+            IconButton(
+              icon: const Icon(Icons.close_rounded, size: 20),
+              color: AppColors.critical,
+              onPressed: _updating ? null : () => _updateHistoryAppointmentStatus(a, AppointmentStatus.rejected),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             ),
-            child: Text(
-              _capitalize(a.status.name),
-              style: AppTextStyles.label.copyWith(color: color),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.check_rounded, size: 20),
+              color: AppColors.primary,
+              onPressed: _updating ? null : () => _updateHistoryAppointmentStatus(a, AppointmentStatus.confirmed),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             ),
-          ),
+          ] else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                _capitalize(a.status.name),
+                style: AppTextStyles.label.copyWith(color: color),
+              ),
+            ),
         ],
       ),
     );

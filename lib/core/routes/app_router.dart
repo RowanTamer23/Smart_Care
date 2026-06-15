@@ -20,7 +20,12 @@ import 'package:smart_care/features/doctor/patients/view/screens/patient_detail_
 import 'package:smart_care/features/doctor/patients/data/model/doctor_patient_model.dart';
 import 'package:smart_care/features/doctor/schedule/data/model/appointment_model.dart';
 import 'package:smart_care/features/doctor/schedule/view/screens/appointment_approval_screen.dart';
+import 'package:smart_care/features/doctor/schedule/view/screens/visit_screen.dart';
 import 'package:smart_care/features/patient/book/view/screens/chat_screen.dart';
+import 'package:smart_care/features/patient/profile/data/model/patient_profile_model.dart';
+import 'package:smart_care/features/patient/profile/data/model/lab_model.dart';
+import 'package:smart_care/features/patient/profile/data/model/medical_record_model.dart';
+import 'package:smart_care/features/video_call/view/screens/video_call_screen.dart';
 
 class AppRouter {
   static Route generateRoute(RouteSettings settings) {
@@ -110,6 +115,27 @@ class AppRouter {
             otherUserName: args['otherUserName'] as String,
             otherUserRole: args['otherUserRole'] as String?,
             otherUserAvatar: args['otherUserAvatar'] as String?,
+          ),
+        );
+
+      case Routes.visitScreen:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => VisitScreen(
+            appointment: args['appointment'] as Appointment,
+            patientProfile: args['patientProfile'] as PatientProfile,
+            medicalRecords: args['medicalRecords'] as List<MedicalRecord>,
+            labs: args['labs'] as List<PatientLab>,
+          ),
+        );
+
+      case Routes.videoCall:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => VideoCallPage(
+            callId: args['callId'] as String,
+            userId: args['userId'] as String,
+            userName: args['userName'] as String,
           ),
         );
     }

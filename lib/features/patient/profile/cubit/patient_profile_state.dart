@@ -1,6 +1,7 @@
 import 'package:smart_care/features/patient/profile/data/model/patient_profile_model.dart';
 import 'package:smart_care/features/patient/profile/data/model/medical_record_model.dart';
 import 'package:smart_care/features/patient/profile/data/model/medical_reminder_model.dart';
+import 'package:smart_care/features/patient/profile/data/model/lab_model.dart';
 
 abstract class PatientProfileState {}
 
@@ -12,7 +13,8 @@ class PatientProfileLoaded extends PatientProfileState {
   final PatientProfile profile;
   final List<MedicalRecord> medicalRecords;
   final List<MedicalReminder> medicalReminders;
-  PatientProfileLoaded(this.profile, this.medicalRecords, this.medicalReminders);
+  final List<PatientLab> labs;
+  PatientProfileLoaded(this.profile, this.medicalRecords, this.medicalReminders, [this.labs = const []]);
 }
 
 class PatientProfileError extends PatientProfileState {

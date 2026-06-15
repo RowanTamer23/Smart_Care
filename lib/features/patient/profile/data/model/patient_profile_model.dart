@@ -111,6 +111,13 @@ class PatientProfile {
 
   /// Converts a Map (JSON) payload from Supabase into this Dart object.
   factory PatientProfile.fromMap(Map<String, dynamic> map) {
+    // Support joined profiles(full_name) — prefer the patient_profiles column,
+    // fall back to the joined profiles table if the direct column is null.
+    final joinedProfiles = map['profiles'] as Map<String, dynamic>?;
+    final resolvedFullName = (map['full_name'] as String?)?.isNotEmpty == true
+        ? map['full_name'] as String
+        : joinedProfiles?['full_name'] as String?;
+
     return PatientProfile(
       id: map['id'] as String,
       profileId: map['profile_id'] as String,
@@ -131,7 +138,7 @@ class PatientProfile {
           ? List<String>.from(map['chronic_diseases'] as List)
           : const [],
       address: map['address'] as String?,
-      fullName: map['full_name'] as String?,
+      fullName: resolvedFullName,
       insuranceNumber: map['insurance_number'] as String?,
       insuranceCompany: map['insurance_company'] as String?,
       emergencyContactName: map['emergency_contact_name'] as String?,
