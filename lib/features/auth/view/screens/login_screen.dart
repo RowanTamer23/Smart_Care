@@ -51,6 +51,7 @@ class _LoginScreenState extends State<LoginScreen>
     context.read<LoginCubit>().login(
           email: _emailCtrl.text.trim(),
           password: _passCtrl.text,
+          keepLoggedIn: _keepLoggedIn,
         );
   }
 

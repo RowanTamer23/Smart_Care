@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_care/core/routes/routes.dart';
+import 'package:smart_care/core/services/api/end_points.dart';
 import 'package:smart_care/core/shared/theme/theme.dart';
 import 'package:smart_care/features/onboarding/view/widgets/feature_tile.dart';
 import 'package:smart_care/features/onboarding/view/widgets/medical_hero_image.dart';
@@ -23,6 +25,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    _checkLoginStatus();
     _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -39,6 +42,28 @@ class _SplashScreenState extends State<SplashScreen>
 
     _fadeController.forward();
     _slideController.forward();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keepLoggedIn = prefs.getBool('keepLoggedIn') ?? false;
+    final userId = prefs.getString(ApiKeys.userIdKey);
+    final role = prefs.getString(ApiKeys.roleKey);
+
+    if (keepLoggedIn && userId != null && role != null) {
+      if (mounted) {
+        Navigator.pushReplacementNamed(
+          context,
+          Routes.home,
+          arguments: {"role": role, "userId": userId},
+        );
+      }
+    } else {
+      if (!keepLoggedIn) {
+        await prefs.remove(ApiKeys.userIdKey);
+        await prefs.remove(ApiKeys.roleKey);
+      }
+    }
   }
 
   @override

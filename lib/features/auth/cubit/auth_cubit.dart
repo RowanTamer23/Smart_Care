@@ -123,6 +123,7 @@ class LoginCubit extends Cubit<LoginState> {
   Future<void> login({
     required String email,
     required String password,
+    bool keepLoggedIn = false,
   }) async {
     emit(LoginLoading());
     try {
@@ -131,8 +132,9 @@ class LoginCubit extends Cubit<LoginState> {
         password: password,
       );
       final prefs = await SharedPreferences.getInstance();
-      prefs.setString(ApiKeys.userIdKey, response.userId);
-      prefs.setString(ApiKeys.roleKey, response.role);
+      await prefs.setBool('keepLoggedIn', keepLoggedIn);
+      await prefs.setString(ApiKeys.userIdKey, response.userId);
+      await prefs.setString(ApiKeys.roleKey, response.role);
       emit(LoginSuccess(
         userId: response.userId,
         role: response.role,
@@ -152,6 +154,10 @@ class LogoutCubit extends Cubit<LogoutState> {
     emit(LogoutLoading());
     try {
       await authRepository.logout();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(ApiKeys.userIdKey);
+      await prefs.remove(ApiKeys.roleKey);
+      await prefs.remove('keepLoggedIn');
       emit(LogoutSuccess(
         message: 'User logged out successfully',
       ));
