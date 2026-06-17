@@ -22,10 +22,13 @@ import 'package:smart_care/features/doctor/schedule/data/model/appointment_model
 import 'package:smart_care/features/doctor/schedule/view/screens/appointment_approval_screen.dart';
 import 'package:smart_care/features/doctor/schedule/view/screens/visit_screen.dart';
 import 'package:smart_care/features/patient/book/view/screens/chat_screen.dart';
+import 'package:smart_care/features/patient/book/view/screens/payment_screen.dart';
 import 'package:smart_care/features/patient/profile/data/model/patient_profile_model.dart';
 import 'package:smart_care/features/patient/profile/data/model/lab_model.dart';
 import 'package:smart_care/features/patient/profile/data/model/medical_record_model.dart';
 import 'package:smart_care/features/video_call/view/screens/video_call_screen.dart';
+import 'package:smart_care/features/patient/home/view/screens/notification_screen.dart';
+import 'package:smart_care/features/patient/home/view/screens/ai_chat_screen.dart';
 
 class AppRouter {
   static Route generateRoute(RouteSettings settings) {
@@ -138,6 +141,25 @@ class AppRouter {
             userName: args['userName'] as String,
           ),
         );
+
+      case Routes.paymentScreen:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => PaymentScreen(
+            appointment: args['appointment'] as Appointment,
+            doctorName: args['doctorName'] as String,
+            specialty: args['specialty'] as String,
+            fee: args['fee'] as double,
+          ),
+        );
+
+      case Routes.notificationScreen:
+        final role = settings.arguments as String? ?? 'patient';
+        return MaterialPageRoute(builder: (_) => NotificationScreen(role: role));
+
+      case Routes.aiChatScreen:
+        final role = settings.arguments as String? ?? 'patient';
+        return MaterialPageRoute(builder: (_) => AiChatScreen(role: role));
     }
 
     // Unknown route

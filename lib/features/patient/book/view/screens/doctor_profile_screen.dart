@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:smart_care/features/doctor/schedule/cubit/appointment_cubit.dart';
 import 'package:smart_care/features/doctor/schedule/data/model/appointment_model.dart';
 import 'package:smart_care/features/doctor/schedule/cubit/availability_cubit.dart';
 import 'package:smart_care/features/doctor/schedule/cubit/availability_state.dart';
@@ -10,6 +9,7 @@ import 'package:smart_care/features/patient/profile/cubit/patient_profile_state.
 import 'package:smart_care/features/patient/shared.dart';
 import 'package:smart_care/features/patient/theme3.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:smart_care/core/routes/routes.dart';
 
 class DoctorProfileScreen extends StatefulWidget {
   final Map<String, dynamic>? doctorData;
@@ -473,16 +473,21 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       careType: _selectedCareType ?? AppointmentCareType.video,
     );
 
-    context.read<AppointmentCubit>().bookAppointment(appointment).then((_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Appointment booked successfully!')),
-      );
-      Navigator.of(context).pop();
-    }).catchError((err) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to book appointment: $err')),
-      );
-    });
+    final name = widget.doctorData?['profiles']?['full_name'] as String? ?? 'Dr. Elena Ross';
+    final specialty = widget.doctorData?['specialties']?['name'] as String? ?? 'Senior Neurosurgeon';
+    final rawFee = widget.doctorData?['consultation_fee'];
+    final fee = rawFee != null ? double.tryParse(rawFee.toString()) ?? 150.0 : 150.0;
+
+    Navigator.pushNamed(
+      context,
+      Routes.paymentScreen,
+      arguments: {
+        'appointment': appointment,
+        'doctorName': name,
+        'specialty': specialty,
+        'fee': fee,
+      },
+    );
   }
 
   @override

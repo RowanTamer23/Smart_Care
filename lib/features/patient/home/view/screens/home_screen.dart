@@ -11,6 +11,8 @@ import 'package:smart_care/features/doctor/schedule/cubit/appointment_cubit.dart
 import 'package:smart_care/features/doctor/schedule/cubit/appointment_state.dart';
 import 'package:smart_care/features/doctor/schedule/data/model/appointment_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:smart_care/core/services/notification_service.dart';
+import 'package:smart_care/features/patient/profile/data/model/notification_model.dart';
 
 class PatientHomeScreen extends StatelessWidget {
   final VoidCallback? onBookPressed;
@@ -137,33 +139,60 @@ class PatientHomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.06), blurRadius: 8)
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(Icons.notifications_outlined,
-                      color: AppColors.textPrimary, size: 22),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      width: 7,
-                      height: 7,
-                      decoration: const BoxDecoration(
-                          color: AppColors.red, shape: BoxShape.circle),
-                    ),
-                  ),
-                ],
+            GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, Routes.notificationScreen);
+              },
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.06), blurRadius: 8)
+                  ],
+                ),
+                child: ValueListenableBuilder<List<NotificationModel>>(
+                  valueListenable: NotificationService().notificationsNotifier,
+                  builder: (context, notifications, _) {
+                    final unreadCount = notifications
+                        .where((n) => !n.isRead && n.timestamp.isBefore(DateTime.now()))
+                        .length;
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
+                      children: [
+                        const Icon(Icons.notifications_outlined,
+                            color: AppColors.textPrimary, size: 22),
+                        if (unreadCount > 0)
+                          Positioned(
+                            top: -4,
+                            right: -4,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                  color: AppColors.red, shape: BoxShape.circle),
+                              constraints: const BoxConstraints(
+                                minWidth: 14,
+                                minHeight: 14,
+                              ),
+                              child: Text(
+                                '$unreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ],

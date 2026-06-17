@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
 class MedicalReminder {
@@ -22,6 +23,95 @@ class MedicalReminder {
     this.isSent = false,
     required this.createdAt,
   });
+
+  // Frequency and schedule helper getters/methods
+  String get rawDosage {
+    if (dosage == null) return '';
+    if (dosage!.startsWith('{')) {
+      try {
+        final decoded = jsonDecode(dosage!);
+        return decoded['dose'] as String? ?? '';
+      } catch (_) {}
+    }
+    return dosage!;
+  }
+
+  String get frequencyType {
+    if (dosage != null && dosage!.startsWith('{')) {
+      try {
+        final decoded = jsonDecode(dosage!);
+        return decoded['freq'] as String? ?? 'daily';
+      } catch (_) {}
+    }
+    return 'daily';
+  }
+
+  int get intervalDays {
+    if (dosage != null && dosage!.startsWith('{')) {
+      try {
+        final decoded = jsonDecode(dosage!);
+        return decoded['interval'] as int? ?? 1;
+      } catch (_) {}
+    }
+    return 1;
+  }
+
+  List<int> get weeklyDays {
+    if (dosage != null && dosage!.startsWith('{')) {
+      try {
+        final decoded = jsonDecode(dosage!);
+        final list = decoded['days'] as List<dynamic>?;
+        if (list != null) {
+          return list.map((e) => e as int).toList();
+        }
+      } catch (_) {}
+    }
+    return [];
+  }
+
+  String get frequencyDescription {
+    final type = frequencyType;
+    if (type == 'daily') {
+      return 'Daily';
+    } else if (type == 'weekly') {
+      final days = weeklyDays;
+      if (days.isEmpty) return 'Weekly';
+      final names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      final selectedNames = days.map((d) => names[d - 1]).join(', ');
+      return 'Weekly on $selectedNames';
+    } else if (type == 'interval') {
+      final days = intervalDays;
+      return 'Every $days days';
+    }
+    return 'Daily';
+  }
+
+  bool isScheduledForDate(DateTime date) {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    final startOnly = DateTime(startDate.year, startDate.month, startDate.day);
+    
+    if (dateOnly.isBefore(startOnly)) return false;
+    
+    if (endDate != null) {
+      final endOnly = DateTime(endDate!.year, endDate!.month, endDate!.day);
+      if (dateOnly.isAfter(endOnly)) return false;
+    }
+    
+    final type = frequencyType;
+    if (type == 'daily') {
+      return true;
+    } else if (type == 'weekly') {
+      final days = weeklyDays;
+      return days.contains(dateOnly.weekday);
+    } else if (type == 'interval') {
+      final interval = intervalDays;
+      if (interval <= 0) return true;
+      final diffDays = dateOnly.difference(startOnly).inDays;
+      return diffDays % interval == 0;
+    }
+    
+    return true;
+  }
 
   /// Creates a copy of this object with the given fields replaced.
   MedicalReminder copyWith({

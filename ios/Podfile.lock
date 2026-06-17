@@ -49,6 +49,8 @@ PODS:
   - flutter_callkit_incoming (0.0.1):
     - CryptoSwift
     - Flutter
+  - flutter_local_notifications (0.0.1):
+    - Flutter
   - flutter_logs_yoer (0.0.1):
     - Flutter
     - ZIPFoundation
@@ -126,6 +128,7 @@ DEPENDENCIES:
   - file_picker (from `.symlinks/plugins/file_picker/ios`)
   - Flutter (from `Flutter`)
   - flutter_callkit_incoming (from `.symlinks/plugins/flutter_callkit_incoming/ios`)
+  - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - flutter_logs_yoer (from `.symlinks/plugins/flutter_logs_yoer/ios`)
   - flutter_ringtone_player (from `.symlinks/plugins/flutter_ringtone_player/ios`)
   - flutter_volume_controller (from `.symlinks/plugins/flutter_volume_controller/ios`)
@@ -181,6 +184,8 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_callkit_incoming:
     :path: ".symlinks/plugins/flutter_callkit_incoming/ios"
+  flutter_local_notifications:
+    :path: ".symlinks/plugins/flutter_local_notifications/ios"
   flutter_logs_yoer:
     :path: ".symlinks/plugins/flutter_logs_yoer/ios"
   flutter_ringtone_player:
@@ -242,6 +247,7 @@ SPEC CHECKSUMS:
   file_picker: b159e0c068aef54932bb15dc9fd1571818edaf49
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_callkit_incoming: 417dd1b46541cdd5d855ad795ccbe97d1c18155e
+  flutter_local_notifications: 4cde75091f6327eb8517fa068a0a5950212d2086
   flutter_logs_yoer: 4295f0100d82945b8cb0807a67e586357dde5ea8
   flutter_ringtone_player: 15eba85187230b87b2512f0e1b92225618bc03e7
   flutter_volume_controller: e4d5832f08008180f76e30faf671ffd5a425e529

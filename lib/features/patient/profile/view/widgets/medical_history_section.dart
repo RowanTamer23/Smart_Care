@@ -69,6 +69,7 @@ class MedicalHistorySection extends StatelessWidget {
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.only(top: 12, bottom: 8),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
@@ -103,6 +104,7 @@ class MedicalHistorySection extends StatelessWidget {
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.only(top: 12, bottom: 8),
       itemCount: surgeryRecords.length,
       itemBuilder: (context, index) {
         final r = surgeryRecords[index];
@@ -118,14 +120,49 @@ class MedicalHistorySection extends StatelessWidget {
     );
   }
 
-  Widget _buildFamilyHistory() {
-    final items = [
-      ('Father — Heart Disease', 'Paternal', C.red, 'Diagnosed at 58'),
-      ('Mother — Type 2 Diabetes', 'Maternal', C.blue, 'Managed with insulin'),
-      ('Grandfather — Hypertension', 'Paternal', C.orange, 'Stroke history'),
-    ];
-    return ListView(
-      children: items.map((e) => HistoryItem(e.$1, e.$2, e.$3, e.$4)).toList(),
+  Widget _buildFamilyHistory(BuildContext context, String patientProfileId, List<MedicalRecord> records) {
+    final familyRecords = records.where((r) => r.recordType == 'family').toList();
+
+    if (familyRecords.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'No family history logged yet.',
+                style: bTextStyle(13, c: C.txt2, w: FontWeight.w500),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Tap 'Add Record' & select 'Family History' to log details.",
+                style: lblTextStyle(c: C.txt3, s: 10),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 12, bottom: 8),
+      itemCount: familyRecords.length,
+      itemBuilder: (context, index) {
+        final r = familyRecords[index];
+        final relation = r.symptoms ?? 'Relative';
+        final condition = r.diagnosis ?? 'Condition';
+        final note = r.notes ?? 'No details';
+        return HistoryItem(
+          '$relation — $condition',
+          '${r.recordDate.year}',
+          C.red,
+          note,
+          onEdit: () =>
+              _showAddEditMedicalRecordDialog(context, patientProfileId, r),
+        );
+      },
     );
   }
 
@@ -163,12 +200,12 @@ class MedicalHistorySection extends StatelessWidget {
                   ],
                 ),
                 SizedBox(
-                  height: 150, // Expanded slightly for better scrollability
+                  height: 260, // Expanded for better list visibility & scrollability
                   child: TabBarView(
                     children: [
                       _buildConditions(context, profile, records),
                       _buildSurgeries(context, profile.id, records),
-                      _buildFamilyHistory(),
+                      _buildFamilyHistory(context, profile.id, records),
                     ],
                   ),
                 ),

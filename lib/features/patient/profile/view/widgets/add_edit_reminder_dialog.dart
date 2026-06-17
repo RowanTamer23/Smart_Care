@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_care/features/patient/profile/cubit/patient_profile_cubit.dart';
@@ -26,16 +27,24 @@ class _AddEditReminderDialogState extends State<AddEditReminderDialog> {
   late DateTime _startDate;
   DateTime? _endDate;
 
+  late String _selectedFreqType;
+  late Set<int> _selectedWeeklyDays;
+  late int _intervalDays;
+
   @override
   void initState() {
     super.initState();
     _nameController =
         TextEditingController(text: widget.reminder?.medicineName ?? '');
     _dosageController =
-        TextEditingController(text: widget.reminder?.dosage ?? '');
+        TextEditingController(text: widget.reminder?.rawDosage ?? '');
     _selectedTime = widget.reminder?.reminderTime ?? TimeOfDay.now();
     _startDate = widget.reminder?.startDate ?? DateTime.now();
     _endDate = widget.reminder?.endDate;
+
+    _selectedFreqType = widget.reminder?.frequencyType ?? 'daily';
+    _selectedWeeklyDays = widget.reminder?.weeklyDays.toSet() ?? <int>{};
+    _intervalDays = widget.reminder?.intervalDays ?? 2;
   }
 
   @override
@@ -119,6 +128,8 @@ class _AddEditReminderDialogState extends State<AddEditReminderDialog> {
                           Icons.scale_rounded,
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      _buildFrequencySelector(),
                       const SizedBox(height: 12),
                       GestureDetector(
                         onTap: () async {
@@ -317,17 +328,171 @@ class _AddEditReminderDialogState extends State<AddEditReminderDialog> {
     );
   }
 
+  Widget _buildFrequencySelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'How often do you take it?',
+          style: hTextStyle(12, c: C.txt1),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _buildFreqTypeTab('daily', 'Daily'),
+            const SizedBox(width: 8),
+            _buildFreqTypeTab('weekly', 'Weekly'),
+            const SizedBox(width: 8),
+            _buildFreqTypeTab('interval', 'Interval'),
+          ],
+        ),
+        if (_selectedFreqType == 'weekly') ...[
+          const SizedBox(height: 12),
+          Text(
+            'Select Days of the Week',
+            style: lblTextStyle(c: C.txt2, s: 11),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(7, (index) {
+              final weekday = index + 1; // 1 = Monday, 7 = Sunday
+              final names = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+              final isSelected = _selectedWeeklyDays.contains(weekday);
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    if (isSelected) {
+                      _selectedWeeklyDays.remove(weekday);
+                    } else {
+                      _selectedWeeklyDays.add(weekday);
+                    }
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: isSelected ? C.teal : C.bg,
+                    border: Border.all(
+                      color: isSelected ? C.teal : C.border,
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    names[index],
+                    style: bTextStyle(
+                      12,
+                      c: isSelected ? Colors.white : C.txt1,
+                      w: isSelected ? FontWeight.bold : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ] else if (_selectedFreqType == 'interval') ...[
+          const SizedBox(height: 12),
+          Text(
+            'Repeat Interval',
+            style: lblTextStyle(c: C.txt2, s: 11),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: C.bg,
+              border: Border.all(color: C.border),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Every $_intervalDays days',
+                  style: bTextStyle(14, w: FontWeight.w600),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline_rounded, color: C.teal, size: 22),
+                      onPressed: _intervalDays > 1
+                          ? () => setState(() => _intervalDays--)
+                          : null,
+                    ),
+                    Text(
+                      '$_intervalDays',
+                      style: bTextStyle(14, w: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline_rounded, color: C.teal, size: 22),
+                      onPressed: () => setState(() => _intervalDays++),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFreqTypeTab(String type, String label) {
+    final isSelected = _selectedFreqType == type;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedFreqType = type;
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected ? C.teal : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? C.teal : C.border,
+            ),
+          ),
+          child: Text(
+            label,
+            style: bTextStyle(
+              12,
+              c: isSelected ? Colors.white : C.txt2,
+              w: isSelected ? FontWeight.bold : FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _save() {
     if (_formKey.currentState!.validate()) {
+      if (_selectedFreqType == 'weekly' && _selectedWeeklyDays.isEmpty) {
+        _selectedWeeklyDays.add(DateTime.now().weekday);
+      }
+
+      final dosageJson = jsonEncode({
+        'dose': _dosageController.text.trim().isEmpty ? 'As directed' : _dosageController.text.trim(),
+        'freq': _selectedFreqType,
+        'interval': _intervalDays,
+        'days': _selectedWeeklyDays.toList(),
+      });
+
       if (widget.reminder == null) {
         // Add new
         final newReminder = MedicalReminder(
           id: 'temp',
           patientProfileId: widget.patientProfileId,
           medicineName: _nameController.text.trim(),
-          dosage: _dosageController.text.trim().isEmpty
-              ? null
-              : _dosageController.text.trim(),
+          dosage: dosageJson,
           reminderTime: _selectedTime,
           startDate: _startDate,
           endDate: _endDate,
@@ -338,9 +503,7 @@ class _AddEditReminderDialogState extends State<AddEditReminderDialog> {
         // Edit existing
         final updatedReminder = widget.reminder!.copyWith(
           medicineName: _nameController.text.trim(),
-          dosage: _dosageController.text.trim().isEmpty
-              ? null
-              : _dosageController.text.trim(),
+          dosage: dosageJson,
           reminderTime: _selectedTime,
           startDate: _startDate,
           endDate: _endDate,

@@ -163,29 +163,33 @@ class _AddEditMedicalRecordDialogState
                             DropdownMenuItem(
                                 value: 'prescription',
                                 child: Text('Prescription')),
+                            DropdownMenuItem(
+                                value: 'family', child: Text('Family History')),
                           ],
                           onChanged: (val) =>
                               setState(() => _selectedType = val ?? 'visit'),
                         ),
                         const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          value: _selectedDoctorId,
-                          decoration: _inputDecoration(
-                              'Doctor', Icons.person_pin_rounded),
-                          items: _doctorsList.map((d) {
-                            return DropdownMenuItem<String>(
-                              value: d['id'] as String,
-                              child: Text(
-                                d['full_name'] as String? ?? 'Unknown Doctor',
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (val) =>
-                              setState(() => _selectedDoctorId = val),
-                          validator: (value) =>
-                              value == null ? 'Please select a doctor' : null,
-                        ),
-                        const SizedBox(height: 12),
+                        if (_selectedType != 'family') ...[
+                          DropdownButtonFormField<String>(
+                            value: _selectedDoctorId,
+                            decoration: _inputDecoration(
+                                'Doctor', Icons.person_pin_rounded),
+                            items: _doctorsList.map((d) {
+                              return DropdownMenuItem<String>(
+                                value: d['id'] as String,
+                                child: Text(
+                                  d['full_name'] as String? ?? 'Unknown Doctor',
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) =>
+                                setState(() => _selectedDoctorId = val),
+                            validator: (value) =>
+                                value == null ? 'Please select a doctor' : null,
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         GestureDetector(
                           onTap: () async {
                             final picked = await showDatePicker(
@@ -248,7 +252,18 @@ class _AddEditMedicalRecordDialogState
                           ),
                           const SizedBox(height: 12),
                         ],
-                        if (_selectedType != 'lab') ...[
+                        if (_selectedType == 'family') ...[
+                          TextFormField(
+                            controller: _symptomsController,
+                            decoration: _inputDecoration(
+                                'Relationship (e.g. Father, Paternal Grandmother)',
+                                Icons.people_outline_rounded),
+                            validator: (val) => val == null || val.trim().isEmpty
+                                ? 'Please enter family relationship'
+                                : null,
+                          ),
+                          const SizedBox(height: 12),
+                        ] else if (_selectedType != 'lab') ...[
                           TextFormField(
                             controller: _symptomsController,
                             decoration:
@@ -262,7 +277,9 @@ class _AddEditMedicalRecordDialogState
                           decoration: _inputDecoration(
                             _selectedType == 'lab'
                                 ? 'Test Name (e.g. Hemoglobin)'
-                                : 'Diagnosis / Condition Name',
+                                : (_selectedType == 'family'
+                                    ? 'Condition / Diagnosis (e.g. Diabetes)'
+                                    : 'Diagnosis / Condition Name'),
                             Icons.healing_rounded,
                           ),
                           validator: (val) => val == null || val.trim().isEmpty
@@ -270,25 +287,29 @@ class _AddEditMedicalRecordDialogState
                               : null,
                         ),
                         const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _treatmentController,
-                          decoration: _inputDecoration(
-                            _selectedType == 'lab'
-                                ? 'Result Value (e.g. 14.2 g/dL)'
-                                : 'Treatment / Dose / Value',
-                            Icons.medication_rounded,
+                        if (_selectedType != 'family') ...[
+                          TextFormField(
+                            controller: _treatmentController,
+                            decoration: _inputDecoration(
+                              _selectedType == 'lab'
+                                  ? 'Result Value (e.g. 14.2 g/dL)'
+                                  : 'Treatment / Dose / Value',
+                              Icons.medication_rounded,
+                            ),
+                            validator: (val) => val == null || val.trim().isEmpty
+                                ? 'This field is required'
+                                : null,
                           ),
-                          validator: (val) => val == null || val.trim().isEmpty
-                              ? 'This field is required'
-                              : null,
-                        ),
-                        const SizedBox(height: 12),
+                          const SizedBox(height: 12),
+                        ],
                         TextFormField(
                           controller: _notesController,
                           decoration: _inputDecoration(
                             _selectedType == 'lab'
                                 ? 'Reference Range (e.g. 13.8 - 17.2 g/dL)'
-                                : 'Additional Notes',
+                                : (_selectedType == 'family'
+                                    ? 'Additional Details (e.g. Diagnosed at 58, Stroke history)'
+                                    : 'Additional Notes'),
                             Icons.description_rounded,
                           ),
                           maxLines: 2,
@@ -331,21 +352,28 @@ class _AddEditMedicalRecordDialogState
 
   void _save() {
     if (_formKey.currentState!.validate()) {
+      final finalDoctorId = _selectedDoctorId ??
+          (_doctorsList.isNotEmpty
+              ? _doctorsList.first['id'] as String
+              : 'f5a8703e-02ba-46a7-9215-163ef0c5a473');
+
       if (widget.record == null) {
         // Add new
         final newRecord = MedicalRecord(
           id: 'temp',
           patientProfileId: widget.patientProfileId,
-          staffProfileId: _selectedDoctorId!,
+          staffProfileId: finalDoctorId,
           symptoms: _symptomsController.text.trim().isEmpty
               ? null
               : _symptomsController.text.trim(),
           diagnosis: _diagnosisController.text.trim().isEmpty
               ? null
               : _diagnosisController.text.trim(),
-          treatment: _treatmentController.text.trim().isEmpty
+          treatment: _selectedType == 'family'
               ? null
-              : _treatmentController.text.trim(),
+              : (_treatmentController.text.trim().isEmpty
+                  ? null
+                  : _treatmentController.text.trim()),
           recordDate: _selectedDate,
           recordType: _selectedType,
           doctorNotes: _selectedType == 'lab' ? _selectedLabStatus : null,
@@ -359,16 +387,18 @@ class _AddEditMedicalRecordDialogState
       } else {
         // Edit existing
         final updatedRecord = widget.record!.copyWith(
-          staffProfileId: _selectedDoctorId!,
+          staffProfileId: finalDoctorId,
           symptoms: _symptomsController.text.trim().isEmpty
               ? null
               : _symptomsController.text.trim(),
           diagnosis: _diagnosisController.text.trim().isEmpty
               ? null
               : _diagnosisController.text.trim(),
-          treatment: _treatmentController.text.trim().isEmpty
+          treatment: _selectedType == 'family'
               ? null
-              : _treatmentController.text.trim(),
+              : (_treatmentController.text.trim().isEmpty
+                  ? null
+                  : _treatmentController.text.trim()),
           recordDate: _selectedDate,
           recordType: _selectedType,
           doctorNotes: _selectedType == 'lab' ? _selectedLabStatus : null,

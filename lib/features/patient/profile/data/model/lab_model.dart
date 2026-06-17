@@ -1,10 +1,10 @@
 class PatientLab {
   final String id;
-  final String? patientProfileId; // Nullable Foreign Key
-  final String? appointmentId; // Nullable Foreign Key
-  final String? staffProfileId; // Nullable Foreign Key
+  final String? patientProfileId;
+  final String? appointmentId;
+  final String? staffProfileId;
   final String? note;
-  final List<String> fileUrls; // Maps to text[]
+  final List<String> fileUrls;
   final DateTime createdAt;
 
   PatientLab({
@@ -17,7 +17,6 @@ class PatientLab {
     required this.createdAt,
   });
 
-  /// Creates a copy of this object with the given fields replaced.
   PatientLab copyWith({
     String? id,
     String? patientProfileId,

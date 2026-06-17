@@ -17,9 +17,13 @@ import 'package:smart_care/features/patient/profile/data/repository/patient_prof
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:smart_care/features/auth/cubit/auth_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:smart_care/core/database/cache_helper.dart';
+import 'package:smart_care/core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await CacheHelper.init();
+  await NotificationService().init();
   await Supabase.initialize(
     url: "https://hbnvbekhyyaclymabwwi.supabase.co",
     anonKey: "sb_publishable_0lo-1ihNR7sX5RPnD3JMhQ_6tOQAt5Y",

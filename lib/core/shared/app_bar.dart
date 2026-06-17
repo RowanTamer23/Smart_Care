@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:smart_care/core/shared/theme/theme2.dart';
+import 'package:smart_care/core/routes/routes.dart';
+import 'package:smart_care/core/services/notification_service.dart';
+import 'package:smart_care/features/patient/profile/data/model/notification_model.dart';
 
 class SmartCareAppBar extends StatelessWidget implements PreferredSizeWidget {
   const SmartCareAppBar({super.key});
@@ -37,27 +40,50 @@ class SmartCareAppBar extends StatelessWidget implements PreferredSizeWidget {
         ],
       ),
       actions: [
-        IconButton(
-          icon: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(Icons.notifications_outlined,
-                  color: AppColors.textPrimary, size: 24),
-              Positioned(
-                top: -2,
-                right: -2,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: AppColors.critical,
-                    shape: BoxShape.circle,
-                  ),
-                ),
+        ValueListenableBuilder<List<NotificationModel>>(
+          valueListenable: NotificationService().notificationsNotifier,
+          builder: (context, notifications, _) {
+            final unreadCount = notifications
+                .where((n) => !n.isRead && n.timestamp.isBefore(DateTime.now()))
+                .length;
+            return IconButton(
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.notifications_outlined,
+                      color: AppColors.textPrimary, size: 24),
+                  if (unreadCount > 0)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: AppColors.critical,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 14,
+                          minHeight: 14,
+                        ),
+                        child: Text(
+                          '$unreadCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ],
-          ),
-          onPressed: () {},
+              onPressed: () {
+                Navigator.pushNamed(context, Routes.notificationScreen);
+              },
+            );
+          },
         ),
         Padding(
           padding: const EdgeInsets.only(right: 12),

@@ -22,4 +22,7 @@ class Routes {
   static const String chatScreen = '/chatScreen';
   static const String visitScreen = '/visitScreen';
   static const String videoCall = '/video-call';
+  static const String paymentScreen = '/paymentScreen';
+  static const String notificationScreen = '/notificationScreen';
+  static const String aiChatScreen = '/aiChatScreen';
 }

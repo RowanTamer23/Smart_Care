@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smart_care/features/patient/profile/data/model/medical_reminder_model.dart';
 import 'package:smart_care/features/patient/profile/view/widgets/section_header.dart';
-import 'package:smart_care/features/patient/profile/view/widgets/dose_time_pill.dart';
 import 'package:smart_care/features/patient/profile/view/widgets/medicine_card.dart';
 import 'package:smart_care/features/patient/profile/view/widgets/profile_styles.dart';
 import 'package:smart_care/features/patient/profile/view/widgets/add_edit_reminder_dialog.dart';
@@ -59,8 +58,10 @@ class _MedicineRemindersState extends State<MedicineReminders> {
 
   @override
   Widget build(BuildContext context) {
-    final total = widget.reminders.length;
-    final taken = widget.reminders.where((r) => _medicineActive[r.id] ?? true).length;
+    final today = DateTime.now();
+    final todayReminders = widget.reminders.where((r) => r.isScheduledForDate(today)).toList();
+    final todayTotal = todayReminders.length;
+    final todayTaken = todayReminders.where((r) => _medicineActive[r.id] ?? false).length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,7 +74,8 @@ class _MedicineRemindersState extends State<MedicineReminders> {
           onAction: () => _showAddEditReminderDialog(context, null),
         ),
         const SizedBox(height: 12),
-        // Today's schedule strip
+        
+        // Today's schedule checklist section
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -83,6 +85,13 @@ class _MedicineRemindersState extends State<MedicineReminders> {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF16302B).withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +99,7 @@ class _MedicineRemindersState extends State<MedicineReminders> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Today's Doses", style: hTextStyle(14, c: Colors.white)),
+                  Text("Today's Dosage Checklist", style: hTextStyle(14, c: Colors.white)),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -110,7 +119,7 @@ class _MedicineRemindersState extends State<MedicineReminders> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '$taken/$total taken',
+                          '$todayTaken/$todayTotal taken',
                           style: lblTextStyle(c: C.green, s: 11),
                         ),
                       ],
@@ -119,37 +128,98 @@ class _MedicineRemindersState extends State<MedicineReminders> {
                 ],
               ),
               const SizedBox(height: 14),
-              if (widget.reminders.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+              if (todayReminders.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  alignment: Alignment.center,
                   child: Text(
-                    'No active reminders for today.',
-                    style: bTextStyle(12, c: Colors.white70),
+                    'No active medicines scheduled for today! 🎉',
+                    style: bTextStyle(13, c: Colors.white70, w: FontWeight.w600),
                   ),
                 )
               else
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: widget.reminders.map((reminder) {
-                      final timeStr = _formatTime(reminder.reminderTime);
-                      final isActive = _medicineActive[reminder.id] ?? true;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: DoseTimePill(
-                          timeStr,
-                          isActive ? 'Taken' : 'Pending',
-                          isActive,
+                Column(
+                  children: todayReminders.map((reminder) {
+                    final isTaken = _medicineActive[reminder.id] ?? false;
+                    final timeStr = _formatTime(reminder.reminderTime);
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white.withOpacity(0.12)),
+                      ),
+                      child: ListTile(
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                        leading: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _medicineActive[reminder.id] = !isTaken;
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: isTaken ? C.green : Colors.transparent,
+                              border: Border.all(
+                                color: isTaken ? C.green : Colors.white60,
+                                width: 1.5,
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: isTaken
+                                ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                                : null,
+                          ),
                         ),
-                      );
-                    }).toList(),
-                  ),
+                        title: Text(
+                          reminder.medicineName,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isTaken ? Colors.white54 : Colors.white,
+                            decoration: isTaken ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${reminder.rawDosage.isEmpty ? 'As directed' : reminder.rawDosage} • $timeStr',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isTaken ? Colors.white38 : Colors.white70,
+                            decoration: isTaken ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isTaken ? C.green.withOpacity(0.2) : C.amber.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            isTaken ? 'Taken' : 'Pending',
+                            style: lblTextStyle(c: isTaken ? C.green : C.amber, s: 9),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        // Medicine cards
+        
+        const SizedBox(height: 20),
+        SectionHeader(
+          'All Medications',
+          icon: Icons.list_alt_rounded,
+          color: C.teal,
+        ),
+        const SizedBox(height: 10),
+        
         if (widget.reminders.isEmpty)
           Container(
             width: double.infinity,
@@ -183,8 +253,8 @@ class _MedicineRemindersState extends State<MedicineReminders> {
           ...List.generate(widget.reminders.length, (index) {
             final reminder = widget.reminders[index];
             final data = (
-              dose: reminder.dosage ?? 'As directed',
-              freq: 'Daily schedule',
+              dose: reminder.rawDosage.isEmpty ? 'As directed' : reminder.rawDosage,
+              freq: reminder.frequencyDescription,
               icon: _icons[index % _icons.length],
               color: _colors[index % _colors.length],
               bg: _bgs[index % _bgs.length],
@@ -195,12 +265,14 @@ class _MedicineRemindersState extends State<MedicineReminders> {
               times: _formatTime(reminder.reminderTime),
             );
 
+            final isTaken = _medicineActive[reminder.id] ?? false;
+
             return GestureDetector(
               onTap: () => _showAddEditReminderDialog(context, reminder),
               child: MedicineCard(
                 name: reminder.medicineName,
                 data: data,
-                active: _medicineActive[reminder.id] ?? true,
+                active: isTaken,
                 onToggle: (v) => setState(() => _medicineActive[reminder.id] = v),
               ),
             );

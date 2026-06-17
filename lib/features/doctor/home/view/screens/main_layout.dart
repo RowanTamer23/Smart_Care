@@ -16,10 +16,14 @@ import 'package:smart_care/features/doctor/schedule/cubit/appointment_state.dart
 import 'package:smart_care/features/doctor/profile/cubit/profile_cubit.dart';
 import 'package:smart_care/features/doctor/profile/cubit/profile_state.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:smart_care/core/services/notification_service.dart';
+import 'package:smart_care/core/routes/routes.dart';
 
 class MainLayout extends StatefulWidget {
   final String role;
   final String? profileId;
+  static final ValueNotifier<int> mainLayoutTabNotifier = ValueNotifier<int>(0);
+
   const MainLayout({super.key, required this.role, this.profileId});
 
   @override
@@ -32,8 +36,17 @@ class _MainLayoutState extends State<MainLayout> {
   List<Widget> _screens = [];
   RealtimeChannel? _appointmentChannel;
 
+  void _onTabNotifierChanged() {
+    if (mounted) {
+      setState(() {
+        _currentIndex = MainLayout.mainLayoutTabNotifier.value;
+      });
+    }
+  }
+
   @override
   void dispose() {
+    MainLayout.mainLayoutTabNotifier.removeListener(_onTabNotifierChanged);
     _unsubscribeFromAppointments();
     super.dispose();
   }
@@ -62,6 +75,30 @@ class _MainLayoutState extends State<MainLayout> {
           callback: (payload) {
             if (mounted) {
               onUpdate();
+              try {
+                final newRecord = payload.newRecord;
+                if (newRecord != null) {
+                  final statusStr = newRecord['status'] as String? ?? 'pending';
+                  final dateStr = newRecord['appointment_date'] as String? ?? '';
+                  final timeStr = newRecord['appointment_time'] as String? ?? '';
+                  
+                  if (payload.eventType == PostgresChangeEvent.insert) {
+                    NotificationService().showInstantNotification(
+                      title: 'Appointment Booked',
+                      body: 'A new appointment has been scheduled for $dateStr at $timeStr.',
+                      type: 'appointment',
+                    );
+                  } else if (payload.eventType == PostgresChangeEvent.update) {
+                    NotificationService().showInstantNotification(
+                      title: 'Appointment Status Updated',
+                      body: 'Your appointment for $dateStr is now ${statusStr.toUpperCase()}.',
+                      type: 'appointment',
+                    );
+                  }
+                }
+              } catch (e) {
+                debugPrint('Realtime notification error: $e');
+              }
             }
           },
         )
@@ -71,6 +108,7 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   void initState() {
     super.initState();
+    MainLayout.mainLayoutTabNotifier.addListener(_onTabNotifierChanged);
     _screens = widget.role == 'doctor'
         ? [
             HomeScreen(role: widget.role, profileId: widget.profileId),
@@ -113,6 +151,14 @@ class _MainLayoutState extends State<MainLayout> {
                   context.read<AppointmentCubit>().getPatientAppointments(patientId);
                 },
               );
+              NotificationService().scheduleMedicineReminders(state.medicalReminders);
+            }
+          },
+        ),
+        BlocListener<AppointmentCubit, AppointmentState>(
+          listener: (context, state) {
+            if (state is AppointmentSuccess) {
+              NotificationService().scheduleAppointmentNotifications(state.appointments);
             }
           },
         ),
@@ -137,6 +183,23 @@ class _MainLayoutState extends State<MainLayout> {
         body: IndexedStack(
           index: _currentIndex,
           children: _screens,
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.pushNamed(
+              context,
+              Routes.aiChatScreen,
+              arguments: widget.role,
+            );
+          },
+          backgroundColor: const Color(0xFF1A3C34),
+          foregroundColor: Colors.white,
+          elevation: 4,
+          icon: const Icon(Icons.auto_awesome_rounded, color: Color(0xFFF5A623), size: 18),
+          label: const Text(
+            'AI Chat',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.2),
+          ),
         ),
         bottomNavigationBar: SmartCareBottomNav(
           currentIndex: _currentIndex,
