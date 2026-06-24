@@ -3,6 +3,7 @@ import 'package:smart_care/core/routes/routes.dart';
 import 'package:smart_care/features/patient/shared.dart';
 import 'package:smart_care/features/patient/theme3.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 
 class _Doctor {
   final String name, specialty, distance, rating;
@@ -10,6 +11,7 @@ class _Doctor {
   final bool hasFilter;
   final String? id;
   final Map<String, dynamic>? rawData;
+  final double? computedDistance;
 
   const _Doctor({
     required this.name,
@@ -20,6 +22,7 @@ class _Doctor {
     this.hasFilter = false,
     this.id,
     this.rawData,
+    this.computedDistance,
   });
 }
 
@@ -67,6 +70,9 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
   List<_Doctor> _displayDoctors = [];
   bool _loading = true;
   String _searchQuery = '';
+  bool _sortByNearest = false;
+  Position? _patientPosition;
+  bool _loadingLocation = false;
 
   @override
   void initState() {
@@ -78,7 +84,8 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
     try {
       final res = await Supabase.instance.client
           .from('medical_staff_profiles')
-          .select('*, profiles!profile_id(full_name, avatar_url), specialties(name)');
+          .select(
+              '*, profiles!profile_id(full_name, avatar_url), specialties(name)');
 
       final mapped = (res as List).map((item) {
         final profile = item['profiles'] as Map<String, dynamic>?;
@@ -117,8 +124,8 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
           _allDoctors = mapped.isEmpty ? _doctors : mapped;
           _allSpecialties = allSpecialtiesList;
           _loading = false;
-          _filterDoctors();
         });
+        _recalculateAllDoctorsDistances();
       }
     } catch (_) {
       if (mounted) {
@@ -127,10 +134,114 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
           _allSpecialties = _allDoctors.map((d) => d.specialty).toSet().toList()
             ..sort();
           _loading = false;
-          _filterDoctors();
         });
+        _recalculateAllDoctorsDistances();
       }
     }
+  }
+
+  Future<void> _toggleSortByNearest() async {
+    if (_sortByNearest) {
+      setState(() {
+        _sortByNearest = false;
+        _patientPosition = null;
+        _recalculateAllDoctorsDistances();
+      });
+      return;
+    }
+
+    setState(() => _loadingLocation = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw 'Location services are disabled.';
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw 'Location permissions are denied.';
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw 'Location permissions are permanently denied.';
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _patientPosition = position;
+        _sortByNearest = true;
+        _loadingLocation = false;
+      });
+      _recalculateAllDoctorsDistances();
+    } catch (e) {
+      setState(() => _loadingLocation = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not sort by distance: $e'),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      }
+    }
+  }
+
+  void _recalculateAllDoctorsDistances() {
+    final updatedDoctors = _allDoctors.map((doc) {
+      final rawLat = doc.rawData?['latitude'];
+      final rawLng = doc.rawData?['longitude'];
+      final docLat = rawLat != null ? double.tryParse(rawLat.toString()) : null;
+      final docLng = rawLng != null ? double.tryParse(rawLng.toString()) : null;
+
+      double? computedDistance;
+      String distanceStr = doc.distance;
+
+      if (_patientPosition != null && docLat != null && docLng != null) {
+        final distanceInMeters = Geolocator.distanceBetween(
+          _patientPosition!.latitude,
+          _patientPosition!.longitude,
+          docLat,
+          docLng,
+        );
+        computedDistance = distanceInMeters / 1000.0; // In kilometers
+        distanceStr = '${computedDistance.toStringAsFixed(1)} km away';
+      } else {
+        final city = doc.rawData?['city'] as String?;
+        final country = doc.rawData?['country'] as String?;
+        if (city != null &&
+            country != null &&
+            city.trim().isNotEmpty &&
+            country.trim().isNotEmpty) {
+          distanceStr = '${city.trim()}, ${country.trim()}';
+        } else {
+          final years = doc.rawData?['years_experience'];
+          distanceStr = years != null ? '$years+ yrs exp' : '5+ yrs exp';
+        }
+      }
+
+      return _Doctor(
+        id: doc.id,
+        name: doc.name,
+        specialty: doc.specialty,
+        distance: distanceStr,
+        rating: doc.rating,
+        avatarBg: doc.avatarBg,
+        hasFilter: doc.hasFilter,
+        rawData: doc.rawData,
+        computedDistance: computedDistance,
+      );
+    }).toList();
+
+    setState(() {
+      _allDoctors = updatedDoctors;
+      _filterDoctors();
+    });
   }
 
   bool _isSpecialtyMatch(String docSpec, String selSpec) {
@@ -194,6 +305,16 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
 
         return true;
       }).toList();
+
+      if (_sortByNearest) {
+        _displayDoctors.sort((a, b) {
+          if (a.computedDistance == null && b.computedDistance == null)
+            return 0;
+          if (a.computedDistance == null) return 1;
+          if (b.computedDistance == null) return -1;
+          return a.computedDistance!.compareTo(b.computedDistance!);
+        });
+      }
     });
   }
 
@@ -240,66 +361,123 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
                     _searchQuery = val;
                     _filterDoctors();
                   },
-                  trailing: GestureDetector(
-                    onTap: () => _showSpecialtyFilterBottomSheet(context),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _selectedSpecialtyFilter != null
-                            ? AppColors.primary
-                            : AppColors.background,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: _selectedSpecialtyFilter != null
-                              ? AppColors.primary
-                              : AppColors.border,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: _toggleSortByNearest,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _sortByNearest
+                                ? AppColors.primary
+                                : AppColors.background,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: _sortByNearest
+                                  ? AppColors.primary
+                                  : AppColors.border,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_loadingLocation)
+                                const SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 1.5,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              else
+                                Icon(
+                                  Icons.near_me_rounded,
+                                  color: _sortByNearest
+                                      ? Colors.white
+                                      : AppColors.primary,
+                                  size: 16,
+                                ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _sortByNearest ? 'Nearest' : 'Distance',
+                                style: AppText.label(
+                                  color: _sortByNearest
+                                      ? Colors.white
+                                      : AppColors.primary,
+                                  size: 11,
+                                  weight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.tune_rounded,
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => _showSpecialtyFilterBottomSheet(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
                             color: _selectedSpecialtyFilter != null
-                                ? Colors.white
-                                : AppColors.primary,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _selectedSpecialtyFilter != null
-                                ? (_selectedSpecialtyFilter!.length > 12
-                                    ? '${_selectedSpecialtyFilter!.substring(0, 10)}...'
-                                    : _selectedSpecialtyFilter!)
-                                : 'Filter',
-                            style: AppText.label(
+                                ? AppColors.primary
+                                : AppColors.background,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
                               color: _selectedSpecialtyFilter != null
-                                  ? Colors.white
-                                  : AppColors.primary,
-                              size: 11,
-                              weight: FontWeight.bold,
+                                  ? AppColors.primary
+                                  : AppColors.border,
                             ),
                           ),
-                          if (_selectedSpecialtyFilter != null) ...[
-                            const SizedBox(width: 4),
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedSpecialtyFilter = null;
-                                  _filterDoctors();
-                                });
-                              },
-                              child: const Icon(
-                                Icons.close_rounded,
-                                color: Colors.white,
-                                size: 12,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.tune_rounded,
+                                color: _selectedSpecialtyFilter != null
+                                    ? Colors.white
+                                    : AppColors.primary,
+                                size: 16,
                               ),
-                            ),
-                          ],
-                        ],
+                              const SizedBox(width: 4),
+                              Text(
+                                _selectedSpecialtyFilter != null
+                                    ? (_selectedSpecialtyFilter!.length > 12
+                                        ? '${_selectedSpecialtyFilter!.substring(0, 10)}...'
+                                        : _selectedSpecialtyFilter!)
+                                    : 'Filter',
+                                style: AppText.label(
+                                  color: _selectedSpecialtyFilter != null
+                                      ? Colors.white
+                                      : AppColors.primary,
+                                  size: 11,
+                                  weight: FontWeight.bold,
+                                ),
+                              ),
+                              if (_selectedSpecialtyFilter != null) ...[
+                                const SizedBox(width: 4),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedSpecialtyFilter = null;
+                                      _filterDoctors();
+                                    });
+                                  },
+                                  child: const Icon(
+                                    Icons.close_rounded,
+                                    color: Colors.white,
+                                    size: 12,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ],

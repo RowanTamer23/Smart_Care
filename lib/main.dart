@@ -20,7 +20,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_care/core/database/cache_helper.dart';
 import 'package:smart_care/core/services/notification_service.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await CacheHelper.init();

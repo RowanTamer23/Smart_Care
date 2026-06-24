@@ -3,6 +3,7 @@ import 'package:smart_care/core/routes/routes.dart';
 import 'package:smart_care/features/patient/shared.dart';
 import 'package:smart_care/features/patient/theme3.dart';
 import 'package:smart_care/features/patient/profile/data/model/medical_record_model.dart';
+import 'package:smart_care/features/patient/profile/data/model/medical_reminder_model.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_care/features/patient/profile/cubit/patient_profile_cubit.dart';
@@ -124,9 +125,21 @@ class PatientHomeScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: AppColors.primaryGradient,
+                image: (state is PatientProfileLoaded &&
+                        state.profile.avatarUrl != null &&
+                        state.profile.avatarUrl!.isNotEmpty)
+                    ? DecorationImage(
+                        image: NetworkImage(state.profile.avatarUrl!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
               ),
-              child: const Icon(Icons.person_rounded,
-                  color: Colors.white, size: 22),
+              child: (state is PatientProfileLoaded &&
+                      state.profile.avatarUrl != null &&
+                      state.profile.avatarUrl!.isNotEmpty)
+                  ? null
+                  : const Icon(Icons.person_rounded,
+                      color: Colors.white, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -158,7 +171,8 @@ class PatientHomeScreen extends StatelessWidget {
                   valueListenable: NotificationService().notificationsNotifier,
                   builder: (context, notifications, _) {
                     final unreadCount = notifications
-                        .where((n) => !n.isRead && n.timestamp.isBefore(DateTime.now()))
+                        .where((n) =>
+                            !n.isRead && n.timestamp.isBefore(DateTime.now()))
                         .length;
                     return Stack(
                       clipBehavior: Clip.none,
@@ -255,6 +269,19 @@ class PatientHomeScreen extends StatelessWidget {
 
           if (futureAppointments.isNotEmpty) {
             appt = futureAppointments.first;
+          }
+        }
+
+        if (appt != null && appt.careType == AppointmentCareType.video) {
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final apptDate = DateTime(
+            appt.appointmentDate.year,
+            appt.appointmentDate.month,
+            appt.appointmentDate.day,
+          );
+          if (apptDate != today) {
+            appt = null;
           }
         }
 
@@ -739,20 +766,136 @@ class PatientHomeScreen extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
                 child: _QuickAction(
-                    icon: Icons.monitor_rounded,
-                    label: 'Manage Prescriptions',
-                    color: AppColors.teal,
-                    bg: AppColors.tealLight)),
+              icon: Icons.monitor_rounded,
+              label: 'Manage Prescriptions',
+              color: AppColors.teal,
+              bg: AppColors.tealLight,
+              onTap: () {
+                Navigator.pushNamed(context, Routes.medicalRecordsScreen);
+              },
+            )),
           ],
         ),
         const SizedBox(height: 10),
         _QuickAction(
-            icon: Icons.medication_rounded,
-            label: 'Order Refill',
-            color: AppColors.accent,
-            bg: AppColors.accentLight,
-            fullWidth: true),
+          icon: Icons.medication_rounded,
+          label: 'Order Refill',
+          color: AppColors.accent,
+          bg: AppColors.accentLight,
+          fullWidth: true,
+          onTap: () {
+            final patientState = context.read<PatientProfileCubit>().state;
+            if (patientState is PatientProfileLoaded) {
+              _showOrderRefillBottomSheet(
+                  context, patientState.medicalReminders);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content:
+                        Text('Loading your medical data... Please try again.')),
+              );
+            }
+          },
+        ),
       ],
+    );
+  }
+
+  void _showOrderRefillBottomSheet(
+      BuildContext context, List<MedicalReminder> reminders) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.65,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Order Medication Refill',
+                            style: AppText.display(18)),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close_rounded,
+                              color: AppColors.textMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'Select an active medication to request a refill from your physician.',
+                      style: AppText.body(13, color: AppColors.textSecondary),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: reminders.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.medication_outlined,
+                                    size: 48, color: AppColors.textMuted),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'No active medications found',
+                                  style: AppText.body(14,
+                                      weight: FontWeight.w600,
+                                      color: AppColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 8),
+                            itemCount: reminders.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final item = reminders[index];
+                              final dose = item.rawDosage.isEmpty
+                                  ? 'As directed'
+                                  : item.rawDosage;
+                              final freq = item.frequencyDescription;
+
+                              return _RefillItemRow(
+                                name: item.medicineName,
+                                subtitle: '$dose • $freq',
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -766,7 +909,13 @@ class PatientHomeScreen extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SectionHeader(title: 'Recent Records', action: 'View All'),
+            SectionHeader(
+              title: 'Recent Records',
+              action: 'View All',
+              onAction: () {
+                Navigator.pushNamed(context, Routes.medicalRecordsScreen);
+              },
+            ),
             const SizedBox(height: 12),
             if (records.isEmpty)
               Container(
@@ -850,6 +999,9 @@ class PatientHomeScreen extends StatelessWidget {
                     iconBg: iconBg,
                     title: title,
                     subtitle: 'Created on $dateStr',
+                    onTap: () {
+                      Navigator.pushNamed(context, Routes.medicalRecordsScreen);
+                    },
                   ),
                 );
               }),
@@ -911,21 +1063,95 @@ class _RecordTile extends StatelessWidget {
   final IconData icon;
   final Color iconColor, iconBg;
   final String title, subtitle;
+  final VoidCallback? onTap;
   const _RecordTile(
       {required this.icon,
       required this.iconColor,
       required this.iconBg,
       required this.title,
-      required this.subtitle});
+      required this.subtitle,
+      this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                    color: iconBg, borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: AppText.body(13, weight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 3),
+                    Text(subtitle,
+                        style: AppText.label(color: AppColors.textMuted)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: AppColors.textMuted, size: 20),
+            ],
+          ),
+        ));
+  }
+}
+
+class _RefillItemRow extends StatefulWidget {
+  final String name;
+  final String subtitle;
+  const _RefillItemRow({required this.name, required this.subtitle});
+
+  @override
+  State<_RefillItemRow> createState() => _RefillItemRowState();
+}
+
+class _RefillItemRowState extends State<_RefillItemRow> {
+  bool _isLoading = false;
+  bool _isSuccess = false;
+
+  void _requestRefill() async {
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _isSuccess = true;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _isSuccess
+              ? AppColors.green.withValues(alpha: 0.3)
+              : AppColors.border,
+        ),
       ),
       child: Row(
         children: [
@@ -933,26 +1159,83 @@ class _RecordTile extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-                color: iconBg, borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, color: iconColor, size: 20),
+              color: _isSuccess
+                  ? AppColors.green.withValues(alpha: 0.08)
+                  : AppColors.accentLight,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              _isSuccess
+                  ? Icons.check_circle_rounded
+                  : Icons.medication_rounded,
+              color: _isSuccess ? AppColors.green : AppColors.accent,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: AppText.body(13, weight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 3),
-                Text(subtitle,
-                    style: AppText.label(color: AppColors.textMuted)),
+                Text(widget.name,
+                    style: AppText.body(14, weight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(
+                  _isSuccess
+                      ? 'Refill Request Pending Approval'
+                      : widget.subtitle,
+                  style: AppText.label(
+                    color:
+                        _isSuccess ? AppColors.green : AppColors.textSecondary,
+                    size: 11,
+                    weight: _isSuccess ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right_rounded,
-              color: AppColors.textMuted, size: 20),
+          const SizedBox(width: 8),
+          if (_isSuccess)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.green.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'SENT',
+                style: AppText.label(
+                  color: AppColors.green,
+                  size: 9,
+                  weight: FontWeight.w700,
+                ),
+              ),
+            )
+          else
+            ElevatedButton(
+              onPressed: _isLoading ? null : _requestRefill,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(
+                      'Refill',
+                      style: AppText.body(11,
+                          color: Colors.white, weight: FontWeight.bold),
+                    ),
+            ),
         ],
       ),
     );

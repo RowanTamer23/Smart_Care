@@ -99,11 +99,21 @@ class _AddEditReminderDialogState extends State<AddEditReminderDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                widget.reminder == null
-                    ? 'Add Medicine Reminder'
-                    : 'Edit Medicine Reminder',
-                style: hTextStyle(18, c: C.primary),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.reminder == null
+                        ? 'Add Medicine Reminder'
+                        : 'Edit Medicine Reminder',
+                    style: hTextStyle(18, c: C.primary),
+                  ),
+                  if (widget.reminder != null)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, color: C.red),
+                      onPressed: () => _delete(context),
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -512,5 +522,48 @@ class _AddEditReminderDialogState extends State<AddEditReminderDialog> {
       }
       Navigator.of(context).pop();
     }
+  }
+
+  void _delete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Delete Reminder', style: hTextStyle(16, c: C.primary)),
+        content: Text(
+          'Are you sure you want to delete this medicine reminder?',
+          style: bTextStyle(13, c: C.txt2),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Cancel',
+              style: bTextStyle(14, c: C.txt2, w: FontWeight.w600),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              context
+                  .read<PatientProfileCubit>()
+                  .deleteReminder(widget.reminder!.id);
+              Navigator.of(context).pop();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: C.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text(
+              'Delete',
+              style: bTextStyle(14, c: Colors.white, w: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

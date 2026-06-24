@@ -4,6 +4,7 @@ import 'package:smart_care/features/patient/profile/view/widgets/section_header.
 import 'package:smart_care/features/patient/profile/view/widgets/medicine_card.dart';
 import 'package:smart_care/features/patient/profile/view/widgets/profile_styles.dart';
 import 'package:smart_care/features/patient/profile/view/widgets/add_edit_reminder_dialog.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MedicineReminders extends StatefulWidget {
   final List<MedicalReminder> reminders;
@@ -21,6 +22,43 @@ class MedicineReminders extends StatefulWidget {
 
 class _MedicineRemindersState extends State<MedicineReminders> {
   final Map<String, bool> _medicineActive = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMedicineStates();
+  }
+
+  void _loadMedicineStates() async {
+    final prefs = await SharedPreferences.getInstance();
+    final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+    
+    final Map<String, bool> activeMap = {};
+    for (final reminder in widget.reminders) {
+      final savedDate = prefs.getString('medicine_taken_${reminder.id}');
+      if (savedDate == todayStr) {
+        activeMap[reminder.id] = true;
+      }
+    }
+    if (mounted) {
+      setState(() {
+        _medicineActive.addAll(activeMap);
+      });
+    }
+  }
+
+  void _toggleMedicineTaken(String reminderId, bool isTaken) async {
+    setState(() {
+      _medicineActive[reminderId] = isTaken;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    if (isTaken) {
+      final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+      await prefs.setString('medicine_taken_$reminderId', todayStr);
+    } else {
+      await prefs.remove('medicine_taken_$reminderId');
+    }
+  }
 
   final _icons = [
     Icons.circle_rounded,
@@ -155,9 +193,7 @@ class _MedicineRemindersState extends State<MedicineReminders> {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                         leading: GestureDetector(
                           onTap: () {
-                            setState(() {
-                              _medicineActive[reminder.id] = !isTaken;
-                            });
+                            _toggleMedicineTaken(reminder.id, !isTaken);
                           },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
@@ -273,7 +309,7 @@ class _MedicineRemindersState extends State<MedicineReminders> {
                 name: reminder.medicineName,
                 data: data,
                 active: isTaken,
-                onToggle: (v) => setState(() => _medicineActive[reminder.id] = v),
+                onToggle: (v) => _toggleMedicineTaken(reminder.id, v),
               ),
             );
           }),

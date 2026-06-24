@@ -56,6 +56,7 @@ class PatientProfile {
   final String? insuranceNumber;
   final String? insuranceCompany;
   final String? emergencyContactName;
+  final String? avatarUrl;
 
   PatientProfile({
     required this.id,
@@ -72,6 +73,7 @@ class PatientProfile {
     this.insuranceNumber,
     this.insuranceCompany,
     this.emergencyContactName,
+    this.avatarUrl,
   });
 
   /// Creates a copy of this object with the given fields replaced.
@@ -90,6 +92,7 @@ class PatientProfile {
     String? insuranceNumber,
     String? insuranceCompany,
     String? emergencyContactName,
+    String? avatarUrl,
   }) {
     return PatientProfile(
       id: id ?? this.id,
@@ -106,6 +109,7 @@ class PatientProfile {
       insuranceNumber: insuranceNumber ?? this.insuranceNumber,
       insuranceCompany: insuranceCompany ?? this.insuranceCompany,
       emergencyContactName: emergencyContactName ?? this.emergencyContactName,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
     );
   }
 
@@ -117,6 +121,10 @@ class PatientProfile {
     final resolvedFullName = (map['full_name'] as String?)?.isNotEmpty == true
         ? map['full_name'] as String
         : joinedProfiles?['full_name'] as String?;
+    
+    final resolvedAvatarUrl = (map['avatar_url'] as String?)?.isNotEmpty == true
+        ? map['avatar_url'] as String
+        : joinedProfiles?['avatar_url'] as String?;
 
     return PatientProfile(
       id: map['id'] as String,
@@ -142,6 +150,7 @@ class PatientProfile {
       insuranceNumber: map['insurance_number'] as String?,
       insuranceCompany: map['insurance_company'] as String?,
       emergencyContactName: map['emergency_contact_name'] as String?,
+      avatarUrl: resolvedAvatarUrl,
     );
   }
 

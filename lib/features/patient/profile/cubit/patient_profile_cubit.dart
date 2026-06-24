@@ -140,4 +140,22 @@ class PatientProfileCubit extends Cubit<PatientProfileState> {
       }
     }
   }
+
+  /// Deletes a medical reminder.
+  Future<void> deleteReminder(String id) async {
+    final currentState = state;
+    if (currentState is PatientProfileLoaded) {
+      emit(PatientProfileLoading());
+      try {
+        await repository.deleteMedicalReminder(id);
+        final records = await repository.getMedicalRecords(currentState.profile.id);
+        final reminders = await repository.getMedicalReminders(currentState.profile.id);
+        final labs = await repository.getLabs(currentState.profile.id);
+        emit(PatientProfileLoaded(currentState.profile, records, reminders, labs));
+      } catch (e) {
+        emit(PatientProfileError(e.toString()));
+      }
+    }
+  }
 }
+

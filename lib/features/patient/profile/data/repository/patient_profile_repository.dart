@@ -190,4 +190,19 @@ Future<PatientLab> addLab(PatientLab lab) async {
       throw 'An unexpected error occurred while updating reminder: $e';
     }
   }
+
+  /// Deletes a medical reminder.
+  Future<void> deleteMedicalReminder(String id) async {
+    try {
+      await _supabase
+          .from('medical_reminders')
+          .delete()
+          .eq('id', id);
+    } on PostgrestException catch (e) {
+      throw e.message;
+    } catch (e) {
+      throw 'An unexpected error occurred while deleting reminder: $e';
+    }
+  }
 }
+
