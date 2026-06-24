@@ -25,4 +25,6 @@ class Routes {
   static const String paymentScreen = '/paymentScreen';
   static const String notificationScreen = '/notificationScreen';
   static const String aiChatScreen = '/aiChatScreen';
+  static const String mapPickerScreen = '/mapPickerScreen';
 }
+

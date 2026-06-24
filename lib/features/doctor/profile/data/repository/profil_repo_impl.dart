@@ -50,11 +50,14 @@ class MedicalStaffRepositoryImpl implements MedicalStaffRepository {
             'supports_home_visit': data.supportsHomeVisit,
             'languages': data.languages,
             'license_number': data.licenseNumber,
+            'latitude': data.latitude,
+            'longitude': data.longitude,
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', data.id)
           .select()
           .single();
+
       return MedicalStaffProfile.fromJson(res);
     } on AuthException catch (e) {
       throw e.message;

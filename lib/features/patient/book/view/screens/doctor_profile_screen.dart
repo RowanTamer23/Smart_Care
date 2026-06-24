@@ -10,6 +10,9 @@ import 'package:smart_care/features/patient/shared.dart';
 import 'package:smart_care/features/patient/theme3.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:smart_care/core/routes/routes.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 class DoctorProfileScreen extends StatefulWidget {
   final Map<String, dynamic>? doctorData;
@@ -546,6 +549,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                   const SizedBox(height: 20),
                   _buildAboutSection(bio, edu, exp),
                   const SizedBox(height: 20),
+                  _buildClinicLocationSection(),
+                  const SizedBox(height: 20),
+
                   _buildReviews(hasReviews),
                   const SizedBox(height: 20),
                   _buildBookingSection(
@@ -804,6 +810,117 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               }).toList(),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClinicLocationSection() {
+    final rawLat = widget.doctorData?['latitude'];
+    final rawLng = widget.doctorData?['longitude'];
+    final lat = rawLat != null ? double.tryParse(rawLat.toString()) : null;
+    final lng = rawLng != null ? double.tryParse(rawLng.toString()) : null;
+
+    if (lat == null || lng == null) {
+      return const SizedBox.shrink();
+    }
+
+    final clinicLocation = LatLng(lat, lng);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Clinic Location', style: AppText.display(16)),
+              const Icon(
+                Icons.location_on_rounded,
+                color: AppColors.accent,
+                size: 20,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
+              height: 180,
+              width: double.infinity,
+              child: GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: clinicLocation,
+                  zoom: 14,
+                ),
+                markers: {
+                  Marker(
+                    markerId: const MarkerId('clinic-location'),
+                    position: clinicLocation,
+                  ),
+                },
+                zoomGesturesEnabled: false,
+                scrollGesturesEnabled: false,
+                tiltGesturesEnabled: false,
+                rotateGesturesEnabled: false,
+                myLocationButtonEnabled: false,
+                mapToolbarEnabled: false,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'Visit the doctor at their clinic location.',
+                  style: AppText.body(13, color: AppColors.textSecondary),
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final url = Uri.parse(
+                      'https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Could not open maps application')),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(
+                  Icons.directions_rounded,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
+                label: Text(
+                  'Directions',
+                  style: AppText.body(12,
+                      color: AppColors.primary, weight: FontWeight.w600),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.primary),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

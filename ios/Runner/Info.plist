@@ -2,10 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to show clinic proximity and let you pick your clinic location.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We need your location to show clinic proximity and let you pick your clinic location.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>We need camera access for video calling.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>We need microphone access for audio during video calls.</string>
+
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

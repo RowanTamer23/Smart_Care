@@ -1,5 +1,8 @@
 class EndPoint {
   // Common EndPoints
+    static String mapApiKey = "AIzaSyDUu_nen7QeSRxle31y8NXFfDqmbst7r8k";
+  static String iosSecretKey = "bsjk937AWOD8NyInwI2r_GPXtso=";
+  static String androidSecretKey = "smlwuHqOG_W325x2g8f_ib9V8Fc=";
 
   static String baseUrl = "https://hbnvbekhyyaclymabwwi.supabase.co/rest/v1/";
 

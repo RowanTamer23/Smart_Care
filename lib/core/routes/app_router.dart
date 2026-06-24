@@ -29,10 +29,13 @@ import 'package:smart_care/features/patient/profile/data/model/medical_record_mo
 import 'package:smart_care/features/video_call/view/screens/video_call_screen.dart';
 import 'package:smart_care/features/patient/home/view/screens/notification_screen.dart';
 import 'package:smart_care/features/patient/home/view/screens/ai_chat_screen.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:smart_care/features/doctor/profile/view/screens/map_picker_screen.dart';
 
 class AppRouter {
   static Route generateRoute(RouteSettings settings) {
     switch (settings.name) {
+
       case Routes.splash:
         return MaterialPageRoute(builder: (_) => SplashScreen());
 
@@ -160,7 +163,13 @@ class AppRouter {
       case Routes.aiChatScreen:
         final role = settings.arguments as String? ?? 'patient';
         return MaterialPageRoute(builder: (_) => AiChatScreen(role: role));
+
+      case Routes.mapPickerScreen:
+        final initialLocation = settings.arguments as LatLng?;
+        return MaterialPageRoute(
+            builder: (_) => MapPickerScreen(initialLocation: initialLocation));
     }
+
 
     // Unknown route
     return MaterialPageRoute(

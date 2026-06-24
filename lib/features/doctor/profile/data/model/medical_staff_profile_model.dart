@@ -22,6 +22,8 @@ class MedicalStaffProfile {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final String? suspensionReason;
+  final double? latitude;
+  final double? longitude;
 
   const MedicalStaffProfile({
     required this.id,
@@ -45,6 +47,8 @@ class MedicalStaffProfile {
     this.createdAt,
     this.updatedAt,
     this.suspensionReason,
+    this.latitude,
+    this.longitude,
   });
 
   factory MedicalStaffProfile.fromJson(Map<String, dynamic> json) {
@@ -72,6 +76,8 @@ class MedicalStaffProfile {
       createdAt: _parseDate(json['created_at']),
       updatedAt: _parseDate(json['updated_at']),
       suspensionReason: json['suspension_reason'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
     );
   }
 
@@ -97,6 +103,8 @@ class MedicalStaffProfile {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? suspensionReason,
+    double? latitude,
+    double? longitude,
   }) {
     return MedicalStaffProfile(
       id: id ?? this.id,
@@ -120,8 +128,11 @@ class MedicalStaffProfile {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       suspensionReason: suspensionReason ?? this.suspensionReason,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
+
 
   static DateTime? _parseDate(dynamic value) =>
       value == null ? null : DateTime.parse(value as String);

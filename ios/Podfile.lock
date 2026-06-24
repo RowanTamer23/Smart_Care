@@ -58,6 +58,20 @@ PODS:
     - Flutter
   - flutter_volume_controller (0.0.1):
     - Flutter
+  - geolocator_apple (1.2.0):
+    - Flutter
+    - FlutterMacOS
+  - Google-Maps-iOS-Utils (5.0.0):
+    - GoogleMaps (~> 8.0)
+  - google_maps_flutter_ios (0.0.1):
+    - Flutter
+    - Google-Maps-iOS-Utils (< 7.0, >= 5.0)
+    - GoogleMaps (< 11.0, >= 8.4)
+  - GoogleMaps (8.4.0):
+    - GoogleMaps/Maps (= 8.4.0)
+  - GoogleMaps/Base (8.4.0)
+  - GoogleMaps/Maps (8.4.0):
+    - GoogleMaps/Base
   - image_picker_ios (0.0.1):
     - Flutter
   - just_audio (0.0.1):
@@ -132,6 +146,8 @@ DEPENDENCIES:
   - flutter_logs_yoer (from `.symlinks/plugins/flutter_logs_yoer/ios`)
   - flutter_ringtone_player (from `.symlinks/plugins/flutter_ringtone_player/ios`)
   - flutter_volume_controller (from `.symlinks/plugins/flutter_volume_controller/ios`)
+  - geolocator_apple (from `.symlinks/plugins/geolocator_apple/darwin`)
+  - google_maps_flutter_ios (from `.symlinks/plugins/google_maps_flutter_ios/ios`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
   - just_audio (from `.symlinks/plugins/just_audio/darwin`)
   - native_device_orientation (from `.symlinks/plugins/native_device_orientation/ios`)
@@ -159,6 +175,8 @@ SPEC REPOS:
     - CryptoSwift
     - DKImagePickerController
     - DKPhotoGallery
+    - Google-Maps-iOS-Utils
+    - GoogleMaps
     - Masonry
     - SDWebImage
     - SwiftyGif
@@ -192,6 +210,10 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_ringtone_player/ios"
   flutter_volume_controller:
     :path: ".symlinks/plugins/flutter_volume_controller/ios"
+  geolocator_apple:
+    :path: ".symlinks/plugins/geolocator_apple/darwin"
+  google_maps_flutter_ios:
+    :path: ".symlinks/plugins/google_maps_flutter_ios/ios"
   image_picker_ios:
     :path: ".symlinks/plugins/image_picker_ios/ios"
   just_audio:
@@ -251,6 +273,10 @@ SPEC CHECKSUMS:
   flutter_logs_yoer: 4295f0100d82945b8cb0807a67e586357dde5ea8
   flutter_ringtone_player: 15eba85187230b87b2512f0e1b92225618bc03e7
   flutter_volume_controller: e4d5832f08008180f76e30faf671ffd5a425e529
+  geolocator_apple: 66b711889fd333205763b83c9dcf0a57a28c7afd
+  Google-Maps-iOS-Utils: 66d6de12be1ce6d3742a54661e7a79cb317a9321
+  google_maps_flutter_ios: 5f2ee3f5cc4fc2398574367f893e3f97bbbcea39
+  GoogleMaps: 8939898920281c649150e0af74aa291c60f2e77d
   image_picker_ios: 4f2f91b01abdb52842a8e277617df877e40f905b
   just_audio: a42c63806f16995daf5b219ae1d679deb76e6a79
   Masonry: 678fab65091a9290e40e2832a55e7ab731aad201

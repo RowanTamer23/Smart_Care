@@ -24,6 +24,9 @@ dependencies:
   zego_uikit_prebuilt_call: ^4.24.2
   flutter_local_notifications: ^17.2.1
   timezone: ^0.9.2
+  google_maps_flutter: ^2.17.1
+  geolocator: ^14.0.2
+  url_launcher: ^6.3.2
 
 
 dev_dependencies:

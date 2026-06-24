@@ -9,6 +9,9 @@ import 'package:smart_care/features/doctor/profile/cubit/profile_cubit.dart';
 import 'package:smart_care/features/doctor/profile/cubit/profile_state.dart';
 import 'package:smart_care/features/doctor/profile/view/widgets/profile_label.dart';
 import 'package:smart_care/features/doctor/profile/view/widgets/profile_switch_row.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:smart_care/core/routes/routes.dart';
+
 
 class PersonalInfoScreen extends StatefulWidget {
   const PersonalInfoScreen({super.key});
@@ -38,12 +41,15 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   late bool _supportsInPerson;
   late bool _supportsVideo;
   late bool _supportsHomeVisit;
+  double? _latitude;
+  double? _longitude;
 
   List<Map<String, dynamic>> _specialties = [];
   File? _pickedImage;
   bool _isSaving = false;
   bool _isLoadingSpecialties = true;
   final _picker = ImagePicker();
+
 
   @override
   void initState() {
@@ -76,9 +82,12 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     _supportsInPerson = medicalProfile?.supportsInPerson ?? false;
     _supportsVideo = medicalProfile?.supportsVideo ?? false;
     _supportsHomeVisit = medicalProfile?.supportsHomeVisit ?? false;
+    _latitude = medicalProfile?.latitude;
+    _longitude = medicalProfile?.longitude;
 
     _loadSpecialties();
   }
+
 
   @override
   void dispose() {
@@ -208,9 +217,12 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         supportsVideo: _supportsVideo,
         supportsHomeVisit: _supportsHomeVisit,
         licenseNumber: _licenseController.text.trim(),
+        latitude: _latitude,
+        longitude: _longitude,
       );
 
       await medicalCubit.updateMedicalData(updatedMedical);
+
 
       if (!mounted) return;
       setState(() => _isSaving = false);
@@ -572,7 +584,83 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                     ),
                     const SizedBox(height: 20),
 
+                    // Clinic Map Location Picker
+                    const ProfileLabel(labelText: 'Clinic Location on Map'),
+                    InkWell(
+                      onTap: () async {
+                        final LatLng? result = await Navigator.pushNamed(
+                          context,
+                          Routes.mapPickerScreen,
+                          arguments: _latitude != null && _longitude != null
+                              ? LatLng(_latitude!, _longitude!)
+                              : null,
+                        ) as LatLng?;
+                        if (result != null) {
+                          setState(() {
+                            _latitude = result.latitude;
+                            _longitude = result.longitude;
+                          });
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.map_rounded,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _latitude != null && _longitude != null
+                                        ? '${_latitude!.toStringAsFixed(6)}, ${_longitude!.toStringAsFixed(6)}'
+                                        : 'Tap to select location on map',
+                                    style: AppTextStyles.body.copyWith(
+                                      color: _latitude != null && _longitude != null
+                                          ? AppColors.textPrimary
+                                          : AppColors.textMuted,
+                                      fontWeight: _latitude != null && _longitude != null
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                  if (_latitude != null && _longitude != null) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Clinic coordinates set',
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: AppColors.stable,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: AppColors.textMuted,
+                              size: 14,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
                     // Languages Input
+
                     const ProfileLabel(labelText: 'Languages Spoken (comma separated)'),
                     TextFormField(
                       controller: _languagesController,
