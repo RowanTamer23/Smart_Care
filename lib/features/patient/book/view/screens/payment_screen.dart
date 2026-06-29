@@ -1031,8 +1031,8 @@ class _PaymentScreenState extends State<PaymentScreen> with SingleTickerProvider
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Navigate back to the home/schedule dashboard root
-                    Navigator.popUntil(context, (route) => route.isFirst);
+                    // Navigate back to the doctor screen
+                    Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,

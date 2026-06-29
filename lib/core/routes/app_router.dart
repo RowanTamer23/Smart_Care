@@ -142,6 +142,8 @@ class AppRouter {
             callId: args['callId'] as String,
             userId: args['userId'] as String,
             userName: args['userName'] as String,
+            patientId: args['patientId'] as String?,
+            patientName: args['patientName'] as String?,
           ),
         );
 

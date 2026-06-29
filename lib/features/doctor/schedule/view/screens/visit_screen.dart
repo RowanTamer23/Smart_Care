@@ -163,83 +163,105 @@ class _VisitScreenState extends State<VisitScreen>
 
         return Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
             children: [
-              if (!hasActiveCall)
-                ElevatedButton.icon(
-                  onPressed: () => _startVideoCall(currentAppt),
-                  icon: const Icon(Icons.videocam_rounded, size: 20),
-                  label: const Text('Start Video Call'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                )
-              else ...[
-                ElevatedButton.icon(
-                  onPressed: () => _joinVideoCall(currentAppt),
-                  icon: const Icon(Icons.videocam_rounded, size: 20),
-                  label: const Text('Join Call'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.stable,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () => _endVideoCall(currentAppt),
-                  icon: const Icon(Icons.call_end_rounded, size: 20),
-                  label: const Text('End Call'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.critical,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ],
-              const SizedBox(width: 12),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    Routes.chatScreen,
-                    arguments: {
-                      'appointmentId': widget.appointment.id,
-                      'currentUserId': _currentUserId,
-                      'otherUserId': _otherUserId,
-                      'otherUserName': widget.patientProfile.fullName,
-                      'otherUserRole': 'Patient',
-                      'otherUserAvatar': null,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (!hasActiveCall)
+                    ElevatedButton.icon(
+                      onPressed: () => _startVideoCall(currentAppt),
+                      icon: const Icon(Icons.videocam_rounded, size: 20),
+                      label: const Text('Start Video Call'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    )
+                  else ...[
+                    ElevatedButton.icon(
+                      onPressed: () => _joinVideoCall(currentAppt),
+                      icon: const Icon(Icons.videocam_rounded, size: 20),
+                      label: const Text('Join Call'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.stable,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => _endVideoCall(currentAppt),
+                      icon: const Icon(Icons.call_end_rounded, size: 20),
+                      label: const Text('End Call'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.critical,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(
+                        context,
+                        Routes.chatScreen,
+                        arguments: {
+                          'appointmentId': widget.appointment.id,
+                          'currentUserId': _currentUserId,
+                          'otherUserId': _otherUserId,
+                          'otherUserName': widget.patientProfile.fullName,
+                          'otherUserRole': 'Patient',
+                          'otherUserAvatar': null,
+                        },
+                      );
                     },
-                  );
-                },
-                icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
-                label: const Text('Chat'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
+                    icon:
+                        const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+                    label: const Text('Chat'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
               ),
+              // if (hasActiveCall) ...[
+              //   const SizedBox(height: 12),
+              //   ElevatedButton.icon(
+              //     onPressed: () => _startCallInPatientApp(currentAppt),
+              //     icon: const Icon(Icons.person_pin_rounded, size: 18),
+              //     label: const Text('Start Call in Patient App'),
+              //     style: ElevatedButton.styleFrom(
+              //       backgroundColor: AppColors.accent,
+              //       foregroundColor: Colors.white,
+              //       elevation: 0,
+              //       padding: const EdgeInsets.symmetric(
+              //           horizontal: 24, vertical: 10),
+              //       shape: RoundedRectangleBorder(
+              //           borderRadius: BorderRadius.circular(12)),
+              //     ),
+              //   ),
+              // ],
             ],
           ),
         );
@@ -278,6 +300,20 @@ class _VisitScreenState extends State<VisitScreen>
         'callId': appt.id,
         'userId': _currentUserId,
         'userName': doctorName,
+        'patientId': widget.patientProfile.id,
+        'patientName': widget.patientProfile.fullName,
+      },
+    );
+  }
+
+  void _startCallInPatientApp(Appointment appt) {
+    Navigator.pushNamed(
+      context,
+      Routes.videoCall,
+      arguments: {
+        'callId': appt.id,
+        'userId': widget.patientProfile.id,
+        'userName': widget.patientProfile.fullName ?? 'Patient',
       },
     );
   }

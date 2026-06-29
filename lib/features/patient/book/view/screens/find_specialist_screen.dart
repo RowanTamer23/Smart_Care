@@ -484,32 +484,44 @@ class _FindSpecialistScreenState extends State<FindSpecialistScreen> {
             ),
           ),
           Expanded(
-            child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary))
-                : _displayDoctors.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.people_outline_rounded,
-                                size: 48, color: AppColors.textMuted),
-                            Text(
-                              'No specialists found',
-                              style: AppText.body(14,
-                                  color: AppColors.textSecondary,
-                                  weight: FontWeight.w600),
+            child: RefreshIndicator(
+              onRefresh: _loadDoctors,
+              color: AppColors.primary,
+              child: _loading
+                  ? const Center(
+                      child:
+                          CircularProgressIndicator(color: AppColors.primary))
+                  : _displayDoctors.isEmpty
+                      ? SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Container(
+                            height: MediaQuery.of(context).size.height * 0.5,
+                            alignment: Alignment.center,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.people_outline_rounded,
+                                    size: 48, color: AppColors.textMuted),
+                                Text(
+                                  'No specialists found',
+                                  style: AppText.body(14,
+                                      color: AppColors.textSecondary,
+                                      weight: FontWeight.w600),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
+                        )
+                      : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _displayDoctors.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (ctx, i) =>
+                              _DoctorCard(doctor: _displayDoctors[i]),
                         ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _displayDoctors.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (ctx, i) =>
-                            _DoctorCard(doctor: _displayDoctors[i]),
-                      ),
+            ),
           ),
         ],
       ),

@@ -79,34 +79,50 @@ class _HomeScreenState extends State<HomeScreen> {
                   .length;
               final totalToday = todayAppointments.length;
 
-              return SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    const HomeGreeting(),
-                    const SizedBox(height: 20),
-                    const HomeSearchBar(),
-                    const SizedBox(height: 16),
-                    HomeStatsRow(
-                      uniquePatients: uniquePatients,
-                      pendingCount: pendingCount,
-                    ),
-                    const SizedBox(height: 16),
-                    TodayScheduleList(
-                      todayList: todayAppointments,
-                      state: state,
-                    ),
-                    const SizedBox(height: 16),
-                    VitalsOverview(
-                      completedToday: completedToday,
-                      totalToday: totalToday,
-                    ),
-                    const SizedBox(height: 16),
-                    const TrendsCard(),
-                    const SizedBox(height: 20),
-                  ],
+              return RefreshIndicator(
+                onRefresh: () async {
+                  if (widget.profileId != null) {
+                    final medicalCubit = context.read<MedicalStaffCubit>();
+                    await medicalCubit.getMedicalData(widget.profileId!);
+                    final profile = medicalCubit.medicalStaffProfile;
+                    if (profile != null) {
+                      await context
+                          .read<AppointmentCubit>()
+                          .getAppointments(profile.id);
+                    }
+                  }
+                },
+                color: AppColors.primary,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
+                      const HomeGreeting(),
+                      const SizedBox(height: 20),
+                      const HomeSearchBar(),
+                      const SizedBox(height: 16),
+                      HomeStatsRow(
+                        uniquePatients: uniquePatients,
+                        pendingCount: pendingCount,
+                      ),
+                      const SizedBox(height: 16),
+                      TodayScheduleList(
+                        todayList: todayAppointments,
+                        state: state,
+                      ),
+                      const SizedBox(height: 16),
+                      VitalsOverview(
+                        completedToday: completedToday,
+                        totalToday: totalToday,
+                      ),
+                      const SizedBox(height: 16),
+                      const TrendsCard(),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               );
             },

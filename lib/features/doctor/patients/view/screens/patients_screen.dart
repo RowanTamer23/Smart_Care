@@ -55,6 +55,22 @@ class _PatientsScreenState extends State<PatientsScreen> {
         );
   }
 
+  Future<void> _handleRefresh() async {
+    final medicalCubit = context.read<MedicalStaffCubit>();
+    final staffProfile = medicalCubit.medicalStaffProfile;
+    if (staffProfile == null) return;
+
+    // 1. Fetch latest appointments
+    await context.read<AppointmentCubit>().getAppointments(staffProfile.id);
+
+    // 2. Fetch latest patients using the updated appointments
+    final appointments = context.read<AppointmentCubit>().appointments;
+    await context.read<DoctorPatientsCubit>().loadPatients(
+          staffProfileId: staffProfile.id,
+          appointments: appointments,
+        );
+  }
+
   List<DoctorPatient> _applyFilter(List<DoctorPatient> all) {
     if (_searchQuery.isEmpty) return all;
     final q = _searchQuery.toLowerCase();
@@ -85,104 +101,117 @@ class _PatientsScreenState extends State<PatientsScreen> {
                 onSearchQueryChanged: (v) => setState(() => _searchQuery = v),
               ),
               Expanded(
-                child: BlocBuilder<DoctorPatientsCubit, DoctorPatientsState>(
-                  builder: (context, state) {
-                    // Auto-trigger on first build if appointments already available
-                    WidgetsBinding.instance.addPostFrameCallback((_) => _tryLoad());
+                child: RefreshIndicator(
+                  onRefresh: _handleRefresh,
+                  color: AppColors.primary,
+                  child: BlocBuilder<DoctorPatientsCubit, DoctorPatientsState>(
+                    builder: (context, state) {
+                      // Auto-trigger on first build if appointments already available
+                      WidgetsBinding.instance.addPostFrameCallback((_) => _tryLoad());
 
-                    if (state is DoctorPatientsLoading) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: AppColors.primary),
-                      );
-                    }
+                      if (state is DoctorPatientsLoading) {
+                        return const Center(
+                          child: CircularProgressIndicator(color: AppColors.primary),
+                        );
+                      }
 
-                    if (state is DoctorPatientsFailure) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.error_outline_rounded,
-                                size: 48,
-                                color: AppColors.critical.withValues(alpha: 0.5),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Failed to load patients',
-                                style: AppTextStyles.heading3
-                                    .copyWith(color: AppColors.textSecondary),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                state.error,
-                                style: AppTextStyles.bodySmall
-                                    .copyWith(color: AppColors.textMuted),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 16),
-                              OutlinedButton.icon(
-                                onPressed: _forceReload,
-                                icon: const Icon(Icons.refresh_rounded, size: 16),
-                                label: const Text('Retry'),
-                              ),
-                            ],
+                      if (state is DoctorPatientsFailure) {
+                        return SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Container(
+                            height: MediaQuery.of(context).size.height * 0.5,
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.all(24.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.error_outline_rounded,
+                                  size: 48,
+                                  color: AppColors.critical.withValues(alpha: 0.5),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Failed to load patients',
+                                  style: AppTextStyles.heading3
+                                      .copyWith(color: AppColors.textSecondary),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  state.error,
+                                  style: AppTextStyles.bodySmall
+                                      .copyWith(color: AppColors.textMuted),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                OutlinedButton.icon(
+                                  onPressed: _forceReload,
+                                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                                  label: const Text('Retry'),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    }
+                        );
+                      }
 
-                    final patients = state is DoctorPatientsSuccess
-                        ? _applyFilter(state.patients)
-                        : <DoctorPatient>[];
+                      final patients = state is DoctorPatientsSuccess
+                          ? _applyFilter(state.patients)
+                          : <DoctorPatient>[];
 
-                    if (patients.isEmpty) {
-                      final appointmentsLoaded =
-                          context.read<AppointmentCubit>().appointments.isNotEmpty;
+                      if (patients.isEmpty) {
+                        final appointmentsLoaded =
+                            context.read<AppointmentCubit>().appointments.isNotEmpty;
 
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.people_outline_rounded,
-                              size: 56,
-                              color: AppColors.textMuted.withValues(alpha: 0.4),
+                        return SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Container(
+                            height: MediaQuery.of(context).size.height * 0.5,
+                            alignment: Alignment.center,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.people_outline_rounded,
+                                  size: 56,
+                                  color: AppColors.textMuted.withValues(alpha: 0.4),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  _searchQuery.isEmpty
+                                      ? 'No patients yet'
+                                      : 'No results for "$_searchQuery"',
+                                  style: AppTextStyles.heading3
+                                      .copyWith(color: AppColors.textSecondary),
+                                ),
+                                if (_searchQuery.isEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    appointmentsLoaded
+                                        ? 'Patients will appear once appointments are confirmed.'
+                                        : 'Patients will appear here\nonce they book an appointment.',
+                                    style: AppTextStyles.bodySmall
+                                        .copyWith(color: AppColors.textMuted),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ],
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _searchQuery.isEmpty
-                                  ? 'No patients yet'
-                                  : 'No results for "$_searchQuery"',
-                              style: AppTextStyles.heading3
-                                  .copyWith(color: AppColors.textSecondary),
-                            ),
-                            if (_searchQuery.isEmpty) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                appointmentsLoaded
-                                    ? 'Patients will appear once appointments are confirmed.'
-                                    : 'Patients will appear here\nonce they book an appointment.',
-                                style: AppTextStyles.bodySmall
-                                    .copyWith(color: AppColors.textMuted),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ],
-                        ),
-                      );
-                    }
+                          ),
+                        );
+                      }
 
-                    return ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      itemCount: patients.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) =>
-                          PatientCard(patient: patients[index]),
-                    );
-                  },
+                      return ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        itemCount: patients.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) =>
+                            PatientCard(patient: patients[index]),
+                      );
+                    },
+                  ),
                 ),
               ),
             ],

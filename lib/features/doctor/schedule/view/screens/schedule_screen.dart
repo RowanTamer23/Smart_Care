@@ -9,6 +9,8 @@ import 'package:smart_care/features/doctor/schedule/view/widgets/calendar_header
 import 'package:smart_care/features/doctor/schedule/view/widgets/week_strip.dart';
 import 'package:smart_care/features/doctor/schedule/view/widgets/schedule_load_card.dart';
 import 'package:smart_care/features/doctor/schedule/view/widgets/schedule_appointments_list.dart';
+import 'package:smart_care/features/patient/profile/cubit/patient_profile_cubit.dart';
+import 'package:smart_care/features/patient/profile/cubit/patient_profile_state.dart';
 
 class ScheduleScreen extends StatefulWidget {
   final String? role;
@@ -114,55 +116,80 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     a.appointmentDate.day == _selectedDate.day;
               }).toList();
 
-              return SingleChildScrollView(
-                child: Column(
-                  children: [
-                    CalendarHeader(
-                      selectedDate: _selectedDate,
-                      role: widget.role,
-                      onPreviousWeek: () => _onNavigation(-7),
-                      onToday: _onToday,
-                      onNextWeek: () => _onNavigation(7),
-                    ),
-                    WeekStrip(
-                      days: _days,
-                      selectedDate: _selectedDate,
-                      onDateSelected: (date) {
-                        setState(() {
-                          _selectedDate = date;
-                        });
-                      },
-                    ),
-                    if (widget.role == 'doctor') ...[
-                      ScheduleLoadCard(
+              return RefreshIndicator(
+                onRefresh: () async {
+                  if (widget.role == 'doctor') {
+                    final medicalCubit = context.read<MedicalStaffCubit>();
+                    final profile = medicalCubit.medicalStaffProfile;
+                    if (profile != null) {
+                      await context
+                          .read<AppointmentCubit>()
+                          .getAppointments(profile.id);
+                    } else if (widget.profileId != null) {
+                      await medicalCubit.getMedicalData(widget.profileId!);
+                    }
+                  } else if (widget.role == 'patient') {
+                    final patientState =
+                        context.read<PatientProfileCubit>().state;
+                    if (patientState is PatientProfileLoaded) {
+                      await context
+                          .read<AppointmentCubit>()
+                          .getPatientAppointments(patientState.profile.id);
+                    }
+                  }
+                },
+                color: AppColors.primary,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Column(
+                    children: [
+                      CalendarHeader(
                         selectedDate: _selectedDate,
-                        filtered: filtered,
-                      ),
-                      ScheduleAppointmentsList(
-                        selectedDate: _selectedDate,
-                        filtered: filtered,
-                        state: state,
                         role: widget.role,
+                        onPreviousWeek: () => _onNavigation(-7),
+                        onToday: _onToday,
+                        onNextWeek: () => _onNavigation(7),
                       ),
-                    ] else if (widget.role == 'patient') ...[
-                      ScheduleAppointmentsList(
+                      WeekStrip(
+                        days: _days,
                         selectedDate: _selectedDate,
-                        filtered: filtered,
-                        state: state,
-                        role: widget.role,
+                        onDateSelected: (date) {
+                          setState(() {
+                            _selectedDate = date;
+                          });
+                        },
                       ),
-                    ] else ...[
-                      const SizedBox(height: 20),
-                      Center(
-                        child: Text(
-                          'Schedule features are only available to medical staff.',
-                          style: AppTextStyles.body
-                              .copyWith(color: AppColors.textSecondary),
+                      if (widget.role == 'doctor') ...[
+                        ScheduleLoadCard(
+                          selectedDate: _selectedDate,
+                          filtered: filtered,
                         ),
-                      )
+                        ScheduleAppointmentsList(
+                          selectedDate: _selectedDate,
+                          filtered: filtered,
+                          state: state,
+                          role: widget.role,
+                        ),
+                      ] else if (widget.role == 'patient') ...[
+                        ScheduleAppointmentsList(
+                          selectedDate: _selectedDate,
+                          filtered: filtered,
+                          state: state,
+                          role: widget.role,
+                        ),
+                      ] else ...[
+                        const SizedBox(height: 20),
+                        Center(
+                          child: Text(
+                            'Schedule features are only available to medical staff.',
+                            style: AppTextStyles.body
+                                .copyWith(color: AppColors.textSecondary),
+                          ),
+                        )
+                      ],
+                      const SizedBox(height: 20),
                     ],
-                    const SizedBox(height: 20),
-                  ],
+                  ),
                 ),
               );
             },
